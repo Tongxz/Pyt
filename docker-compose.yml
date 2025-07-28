@@ -1,0 +1,109 @@
+# 人体行为检测系统 Docker Compose 配置
+# Human Behavior Detection System Docker Compose Configuration
+
+version: '3.8'
+
+services:
+  # 主应用服务
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hbd-app
+    ports:
+      - "8000:8000"  # API端口
+      - "8080:8080"  # Web界面端口
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./models:/app/models
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://hbd_user:hbd_password@postgres:5432/hbd_db
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=development
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - hbd-network
+    restart: unless-stopped
+
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: hbd-postgres
+    environment:
+      - POSTGRES_DB=hbd_db
+      - POSTGRES_USER=hbd_user
+      - POSTGRES_PASSWORD=hbd_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - hbd-network
+    restart: unless-stopped
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: hbd-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - hbd-network
+    restart: unless-stopped
+
+  # Nginx 反向代理（可选）
+  nginx:
+    image: nginx:alpine
+    container_name: hbd-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - app
+    networks:
+      - hbd-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # 开发工具容器
+  dev-tools:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: hbd-dev-tools
+    volumes:
+      - ./:/app
+    working_dir: /app
+    command: tail -f /dev/null
+    networks:
+      - hbd-network
+    profiles:
+      - development
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  hbd-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

@@ -1,0 +1,221 @@
+# 人体行为检测系统默认配置
+# Human Behavior Detection System Default Configuration
+
+# 系统配置
+system:
+  name: "Human Behavior Detection System"
+  version: "1.0.0"
+  debug: false
+  log_level: "INFO"
+  max_workers: 4
+
+# 检测配置
+detection:
+  # 置信度阈值
+  confidence_threshold: 0.5
+  # IoU阈值
+  iou_threshold: 0.4
+  # 最大检测数量
+  max_detections: 100
+  # 输入图像尺寸
+  input_size: [640, 640]
+  # 检测类别
+  classes:
+    - person
+
+# 追踪配置
+tracking:
+  # 最大消失帧数
+  max_disappeared: 30
+  # 最大追踪距离
+  max_distance: 50
+  # 最小追踪长度
+  min_track_length: 5
+  # IoU阈值
+  iou_threshold: 0.3
+
+# 行为识别配置
+behavior:
+  # 启用的行为类型
+  enabled_behaviors:
+    - hairnet_detection
+    - handwash_detection
+    - sanitize_detection
+  
+  # 行为检测阈值
+  thresholds:
+    hairnet_detection: 0.7
+    handwash_detection: 0.6
+    sanitize_detection: 0.6
+  
+  # 行为持续时间要求（秒）
+  duration_requirements:
+    handwash_detection: 20
+    sanitize_detection: 5
+
+# 区域管理配置
+regions:
+  # 默认区域类型
+  default_regions:
+    - name: "入口区域"
+      type: "entrance"
+      required_behaviors: ["hairnet_detection"]
+      max_capacity: 10
+    
+    - name: "洗手区域"
+      type: "handwash_area"
+      required_behaviors: ["handwash_detection"]
+      max_capacity: 5
+    
+    - name: "消毒区域"
+      type: "sanitize_area"
+      required_behaviors: ["sanitize_detection"]
+      max_capacity: 3
+
+# 模型配置
+models:
+  # YOLO模型
+  yolo:
+    model_path: "models/yolov8n.pt"
+    device: "auto"  # auto, cpu, cuda
+    half_precision: false
+  
+  # 姿态估计模型
+  pose:
+    model_path: "models/pose_estimation.pt"
+    device: "auto"
+    keypoints: 17
+  
+  # 发网检测模型
+  hairnet:
+    model_path: "models/hairnet_detection.pt"
+    device: "auto"
+    confidence_threshold: 0.7
+  
+  # 洗手检测模型
+  handwash:
+    model_path: "models/handwash_detection.pt"
+    device: "auto"
+    confidence_threshold: 0.6
+  
+  # 消毒检测模型
+  sanitize:
+    model_path: "models/sanitize_detection.pt"
+    device: "auto"
+    confidence_threshold: 0.6
+
+# 摄像头配置
+cameras:
+  # 默认摄像头设置
+  default:
+    resolution: [1280, 720]
+    fps: 30
+    buffer_size: 1
+  
+  # 摄像头源列表
+  sources:
+    - id: "camera_01"
+      name: "入口摄像头"
+      source_type: "webcam"
+      source_path: "0"
+      enabled: true
+      regions: ["entrance"]
+    
+    - id: "camera_02"
+      name: "洗手区摄像头"
+      source_type: "rtsp"
+      source_path: "rtsp://192.168.1.100/stream"
+      enabled: false
+      regions: ["handwash_area"]
+
+# API配置
+api:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+  cors_enabled: true
+  max_content_length: 16777216  # 16MB
+  
+  # 认证配置
+  auth:
+    enabled: false
+    secret_key: "your-secret-key-here"
+    token_expiration: 3600  # 1小时
+
+# 数据库配置
+database:
+  enabled: false
+  type: "sqlite"  # sqlite, postgresql, mysql
+  connection:
+    sqlite:
+      path: "data/detection_records.db"
+    postgresql:
+      host: "localhost"
+      port: 5432
+      database: "behavior_detection"
+      username: "user"
+      password: "password"
+
+# 存储配置
+storage:
+  # 数据目录
+  data_dir: "data"
+  # 日志目录
+  log_dir: "logs"
+  # 模型目录
+  model_dir: "models"
+  # 配置目录
+  config_dir: "config"
+  
+  # 录像配置
+  recording:
+    enabled: false
+    format: "mp4"
+    quality: "medium"  # low, medium, high
+    max_duration: 3600  # 1小时
+    max_file_size: 1073741824  # 1GB
+  
+  # 截图配置
+  screenshots:
+    enabled: true
+    format: "jpg"
+    quality: 85
+    save_detections: true
+    save_violations: true
+
+# 通知配置
+notifications:
+  enabled: false
+  
+  # 邮件通知
+  email:
+    enabled: false
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    username: "your-email@gmail.com"
+    password: "your-password"
+    recipients: ["admin@company.com"]
+  
+  # Webhook通知
+  webhook:
+    enabled: false
+    url: "https://your-webhook-url.com/notifications"
+    timeout: 10
+
+# 性能配置
+performance:
+  # 多线程配置
+  threading:
+    max_workers: 4
+    queue_size: 100
+  
+  # 内存管理
+  memory:
+    max_cache_size: 1000
+    cleanup_interval: 300  # 5分钟
+  
+  # GPU配置
+  gpu:
+    enabled: true
+    memory_fraction: 0.8
+    allow_growth: true
