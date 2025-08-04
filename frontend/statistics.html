@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发网检测统计分析</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .nav-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .nav-tab {
+            padding: 15px 30px;
+            background: none;
+            border: none;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #7f8c8d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-tab.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+
+        .nav-tab:hover {
+            color: #2980b9;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card.success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+
+        .stat-card.warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .stat-card.info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .chart-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .chart {
+            width: 100%;
+            height: 400px;
+        }
+
+        .history-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .table-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .table-content {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .status-compliant {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-non-compliant {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-tabs {
+                flex-direction: column;
+            }
+
+            .nav-tab {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🥽 发网检测统计分析</h1>
+            <p>实时监控发网佩戴合规情况，提供详细的统计分析和历史记录</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('overview')">📊 概览</button>
+            <button class="nav-tab" onclick="showTab('trends')">📈 趋势分析</button>
+            <button class="nav-tab" onclick="showTab('history')">📋 历史记录</button>
+        </div>
+
+        <!-- 概览标签页 -->
+        <div id="overview" class="tab-content active">
+            <button class="refresh-btn" onclick="refreshData()">🔄 刷新数据</button>
+            
+            <div class="stats-grid" id="statsGrid">
+                <div class="loading">正在加载统计数据...</div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">今日检测趋势</div>
+                <canvas id="todayChart" class="chart"></canvas>
+            </div>
+        </div>
+
+        <!-- 趋势分析标签页 -->
+        <div id="trends" class="tab-content">
+            <div class="chart-container">
+                <div class="chart-title">7天合规率趋势</div>
+                <canvas id="complianceChart" class="chart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">检测量统计</div>
+                <canvas id="volumeChart" class="chart"></canvas>
+            </div>
+        </div>
+
+        <!-- 历史记录标签页 -->
+        <div id="history" class="tab-content">
+            <div class="history-table">
+                <div class="table-header">
+                    📋 检测历史记录
+                </div>
+                <div class="table-content">
+                    <table id="historyTable">
+                        <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>检测人数</th>
+                                <th>佩戴发网</th>
+                                <th>合规率</th>
+                                <th>平均置信度</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <tr>
+                                <td colspan="6" class="loading">正在加载历史记录...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // 全局变量
+        let charts = {};
+        let currentData = {};
+
+        // 标签页切换
+        function showTab(tabName) {
+            // 隐藏所有标签页
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 移除所有标签按钮的激活状态
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 显示选中的标签页
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            // 根据标签页加载相应数据
+            if (tabName === 'trends') {
+                loadTrendsData();
+            } else if (tabName === 'history') {
+                loadHistoryData();
+            }
+        }
+
+        // 刷新数据
+        async function refreshData() {
+            await loadOverviewData();
+            if (document.getElementById('trends').classList.contains('active')) {
+                await loadTrendsData();
+            }
+            if (document.getElementById('history').classList.contains('active')) {
+                await loadHistoryData();
+            }
+        }
+
+        // 加载概览数据
+        async function loadOverviewData() {
+            try {
+                const response = await fetch('http://localhost:8000/api/statistics/realtime');
+                const data = await response.json();
+                currentData.overview = data;
+                
+                renderStatsCards(data);
+                renderTodayChart(data);
+            } catch (error) {
+                console.error('加载概览数据失败:', error);
+                showError('加载概览数据失败，请检查网络连接');
+            }
+        }
+
+        // 渲染统计卡片
+        function renderStatsCards(data) {
+            const statsGrid = document.getElementById('statsGrid');
+            
+            const today = data.today || {};
+            const total = data.total || {};
+            
+            const todayComplianceRate = today.today_persons > 0 ? 
+                ((today.today_with_hairnet || 0) / today.today_persons * 100).toFixed(1) : '0.0';
+            
+            const totalComplianceRate = total.total_persons > 0 ? 
+                ((total.total_with_hairnet || 0) / total.total_persons * 100).toFixed(1) : '0.0';
+            
+            statsGrid.innerHTML = `
+                <div class="stat-card info">
+                    <div class="stat-value">${today.today_detections || 0}</div>
+                    <div class="stat-label">今日检测次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${today.today_persons || 0}</div>
+                    <div class="stat-label">今日检测人数</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value">${today.today_with_hairnet || 0}</div>
+                    <div class="stat-label">今日佩戴发网</div>
+                </div>
+                <div class="stat-card ${parseFloat(todayComplianceRate) >= 90 ? 'success' : 'warning'}">
+                    <div class="stat-value">${todayComplianceRate}%</div>
+                    <div class="stat-label">今日合规率</div>
+                </div>
+                <div class="stat-card info">
+                    <div class="stat-value">${total.total_detections || 0}</div>
+                    <div class="stat-label">总检测次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${totalComplianceRate}%</div>
+                    <div class="stat-label">总体合规率</div>
+                </div>
+            `;
+        }
+
+        // 渲染今日趋势图
+        function renderTodayChart(data) {
+            const ctx = document.getElementById('todayChart').getContext('2d');
+            
+            if (charts.today) {
+                charts.today.destroy();
+            }
+            
+            // 模拟今日小时数据（实际应该从API获取）
+            const hours = Array.from({length: 24}, (_, i) => i);
+            const detections = hours.map(() => Math.floor(Math.random() * 20));
+            const compliance = hours.map(() => Math.floor(Math.random() * 40 + 60));
+            
+            charts.today = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hours.map(h => `${h}:00`),
+                    datasets: [{
+                        label: '检测次数',
+                        data: detections,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y'
+                    }, {
+                        label: '合规率(%)',
+                        data: compliance,
+                        borderColor: '#2ecc71',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: '检测次数'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: '合规率(%)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+        }
+
+        // 加载趋势数据
+        async function loadTrendsData() {
+            try {
+                const response = await fetch('http://localhost:8000/api/statistics/daily?days=7');
+                const data = await response.json();
+                
+                renderComplianceChart(data);
+                renderVolumeChart(data);
+            } catch (error) {
+                console.error('加载趋势数据失败:', error);
+                showError('加载趋势数据失败，请检查网络连接');
+            }
+        }
+
+        // 渲染合规率趋势图
+        function renderComplianceChart(data) {
+            const ctx = document.getElementById('complianceChart').getContext('2d');
+            
+            if (charts.compliance) {
+                charts.compliance.destroy();
+            }
+            
+            const labels = data.map(d => d.date).reverse();
+            const rates = data.map(d => d.compliance_rate || 0).reverse();
+            
+            charts.compliance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '合规率(%)',
+                        data: rates,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: '合规率(%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 渲染检测量统计图
+        function renderVolumeChart(data) {
+            const ctx = document.getElementById('volumeChart').getContext('2d');
+            
+            if (charts.volume) {
+                charts.volume.destroy();
+            }
+            
+            const labels = data.map(d => d.date).reverse();
+            const detections = data.map(d => d.total_detections || 0).reverse();
+            const persons = data.map(d => d.total_persons || 0).reverse();
+            
+            charts.volume = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '检测次数',
+                        data: detections,
+                        backgroundColor: 'rgba(52, 152, 219, 0.8)'
+                    }, {
+                        label: '检测人数',
+                        data: persons,
+                        backgroundColor: 'rgba(46, 204, 113, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '数量'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 加载历史记录
+        async function loadHistoryData() {
+            try {
+                const response = await fetch('http://localhost:8000/api/statistics/history?limit=50');
+                const data = await response.json();
+                
+                renderHistoryTable(data);
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+                showError('加载历史记录失败，请检查网络连接');
+            }
+        }
+
+        // 渲染历史记录表格
+        function renderHistoryTable(data) {
+            const tbody = document.getElementById('historyTableBody');
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="loading">暂无历史记录</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = data.map(record => {
+                const complianceRate = record.total_persons > 0 ? 
+                    (record.persons_with_hairnet / record.total_persons * 100).toFixed(1) : '0.0';
+                
+                const isCompliant = parseFloat(complianceRate) >= 90;
+                const statusClass = isCompliant ? 'status-compliant' : 'status-non-compliant';
+                const statusText = isCompliant ? '合规' : '不合规';
+                
+                return `
+                    <tr>
+                        <td>${new Date(record.timestamp).toLocaleString('zh-CN')}</td>
+                        <td>${record.total_persons}</td>
+                        <td>${record.persons_with_hairnet}</td>
+                        <td>${complianceRate}%</td>
+                        <td>${(record.accuracy_score || 0).toFixed(3)}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(errorDiv, container.firstChild);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOverviewData();
+            
+            // 每30秒自动刷新概览数据
+            setInterval(() => {
+                if (document.getElementById('overview').classList.contains('active')) {
+                    loadOverviewData();
+                }
+            }, 30000);
+        });
+    </script>
+</body>
+</html>

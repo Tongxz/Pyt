@@ -105,11 +105,59 @@
         .upload-text {
             font-size: 1.1rem;
             color: #666;
+            margin-bottom: 0.5rem;
+        }
+        
+        .upload-formats {
+            font-size: 0.9rem;
+            color: #888;
             margin-bottom: 1rem;
         }
 
         .file-input {
             display: none;
+        }
+
+        .file-type-selector {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: linear-gradient(45deg, #f8f9ff, #e8ecff);
+            border-radius: 15px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .radio-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .radio-option input[type="radio"] {
+            margin-right: 0.5rem;
+            accent-color: #667eea;
+        }
+
+        .radio-option input[type="radio"]:checked + .radio-label {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .radio-label {
+            font-size: 1rem;
+            color: #666;
+            transition: all 0.3s ease;
         }
 
         .btn {
@@ -172,6 +220,172 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
+        .annotated-image-container {
+            margin: 20px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            color: white;
+        }
+
+        .image-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .image-header h4 {
+            margin: 0;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .image-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .image-controls .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .image-controls .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .image-wrapper {
+            position: relative;
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .result-image.enhanced-annotation {
+            width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .result-image.enhanced-annotation:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .result-image.fullscreen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(1);
+            max-width: 90vw;
+            max-height: 90vh;
+            z-index: 10000;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .image-overlay {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            padding: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .annotation-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .legend-color.compliant {
+            background: #10b981;
+        }
+
+        .legend-color.non-compliant {
+            background: #ef4444;
+        }
+
+        .legend-note {
+            color: #d1d5db;
+            font-style: italic;
+            margin-top: 4px;
+            font-size: 11px;
+        }
+
+        /* 通知动画 */
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* 全屏时的背景遮罩 */
+        .result-image.fullscreen::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: -1;
+        }
+
         .detection-info {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -190,13 +404,128 @@
         .info-value {
             font-size: 2rem;
             font-weight: bold;
-            color: #667eea;
+            color: #2563eb;
             margin-bottom: 0.5rem;
+        }
+        
+        .compliance-good {
+            color: #16a34a !important;
+        }
+        
+        .compliance-medium {
+            color: #ea580c !important;
+        }
+        
+        .compliance-poor {
+            color: #dc2626 !important;
+        }
+
+        .info-value.good {
+            color: #27ae60;
+        }
+        
+        .info-value.warning {
+            color: #f39c12;
+        }
+        
+        .info-value.danger {
+            color: #e74c3c;
         }
 
         .info-label {
             color: #666;
             font-size: 0.9rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value.good {
+            color: #27ae60;
+        }
+        
+        .stat-value.warning {
+            color: #f39c12;
+        }
+        
+        .stat-value.danger {
+            color: #e74c3c;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .detection {
+            margin: 5px 0;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        
+        .detection.compliant {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        
+        .detection.non-compliant {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .summary {
+            display: flex;
+            gap: 15px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+        
+        .with-hairnet {
+            color: #28a745;
+            font-weight: 600;
+        }
+        
+        .without-hairnet {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        .compliance {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .compliance.good {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .compliance.warning {
+            background: #fff3cd;
+            color: #856404;
         }
 
         .status {
@@ -272,19 +601,31 @@
     </div>
 
     <div class="container">
-        <!-- 图像上传检测区域 -->
+        <!-- 图像/视频上传检测区域 -->
         <div class="upload-section">
-            <h2 class="section-title">📷 图像检测</h2>
+            <h2 class="section-title">📷 图像/视频检测</h2>
+            
+            <!-- 文件类型选择 -->
+            <div class="file-type-selector">
+                <label class="radio-option">
+                    <input type="radio" name="fileType" value="image" checked>
+                    <span class="radio-label">📷 图片检测</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="fileType" value="video">
+                    <span class="radio-label">🎬 视频检测</span>
+                </label>
+            </div>
             
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📁</div>
-                <div class="upload-text">点击或拖拽图片到此处</div>
-                <div class="upload-text">支持 JPG、PNG、GIF 格式</div>
+                <div class="upload-text" id="uploadText">点击或拖拽图片到此处</div>
+                <div class="upload-formats" id="uploadFormats">支持 JPG、PNG、GIF 格式</div>
                 <input type="file" id="fileInput" class="file-input" accept="image/*">
             </div>
             
             <div class="controls">
-                <button class="btn" id="uploadBtn">选择图片</button>
+                <button class="btn" id="uploadBtn">选择文件</button>
                 <button class="btn" id="detectBtn" disabled>开始检测</button>
             </div>
             
@@ -308,9 +649,28 @@
             
             <div id="realtimeStatus"></div>
             <div id="realtimeResult"></div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalDetections">0</div>
+                    <div class="stat-label">总检测次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalPersons">0</div>
+                    <div class="stat-label">检测总人数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalWithHairnet">0</div>
+                    <div class="stat-label">佩戴发网人数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="complianceRate">0.0%</div>
+                    <div class="stat-label">发网合规率</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="/frontend/app.js"></script>
 </body>
 </html>

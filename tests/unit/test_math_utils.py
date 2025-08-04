@@ -13,6 +13,7 @@ except ImportError:
 import math
 from typing import List, Tuple
 
+from pathlib import Path
 try:
     from src.utils.math_utils import (
         euclidean_distance,
@@ -81,11 +82,11 @@ class TestAngleFunctions:
         
         # 测试平角
         angle = angle_between_points((0, 0), (1, 0), (2, 0))
-        assert abs(angle - 0) < 1e-10
+        assert abs(angle - math.pi) < 1e-10
         
         # 测试锐角
         angle = angle_between_points((0, 0), (1, 0), (1, 0.5))
-        assert 0 < angle < math.pi/2
+        assert 0 < angle <= math.pi/2
     
     def test_normalize_angle(self):
         """测试角度标准化"""

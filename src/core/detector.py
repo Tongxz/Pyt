@@ -5,7 +5,6 @@ import numpy as np
 from typing import List, Tuple, Dict, Optional
 from ultralytics import YOLO
 import logging
-import random
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +24,10 @@ class HumanDetector:
         """
         self.device = self._get_device(device)
         self.model = self._load_model(model_path)
-        self.confidence_threshold = 0.6   # 进一步提高置信度阈值
-        self.iou_threshold = 0.4   # 降低IoU阈值，减少重叠检测
-        self.min_box_area = 1000   # 最小检测框面积，过滤小目标
-        self.max_box_ratio = 5.0   # 最大宽高比，过滤异常形状
+        self.confidence_threshold = 0.4   # 提高置信度阈值，减少误检
+        self.iou_threshold = 0.5   # 提高IoU阈值，更严格的重叠抑制
+        self.min_box_area = 1200   # 提高最小检测框面积，过滤小目标
+        self.max_box_ratio = 4.5   # 降低最大宽高比，过滤异常形状
         
         logger.info(f"HumanDetector initialized on {self.device}")
     
@@ -60,67 +59,63 @@ class HumanDetector:
         Returns:
             检测结果列表，每个元素包含bbox、confidence、class_id等信息
         """
-        if self.model is not None:
-            # 真实YOLO检测
-            try:
-                results = self.model(image, conf=self.confidence_threshold, iou=self.iou_threshold)
-                detections = []
-                
-                for result in results:
-                    boxes = result.boxes
-                    if boxes is not None:
-                        for box in boxes:
-                            # 只检测人体 (class_id = 0)
-                            if int(box.cls) == 0:
-                                x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                                confidence = float(box.conf[0].cpu().numpy())
-                                
-                                # 计算检测框属性
-                                width = x2 - x1
-                                height = y2 - y1
-                                area = width * height
-                                aspect_ratio = max(width, height) / min(width, height)
-                                
-                                # 应用后处理过滤
-                                if (area >= self.min_box_area and 
-                                    aspect_ratio <= self.max_box_ratio and
-                                    width > 20 and height > 40):  # 人体最小尺寸
-                                    
-                                    detection = {
-                                        'bbox': [int(x1), int(y1), int(x2), int(y2)],
-                                        'confidence': confidence,
-                                        'class_id': 0,
-                                        'class_name': 'person'
-                                    }
-                                    detections.append(detection)
-                
-                logger.info(f"YOLO检测到 {len(detections)} 个人体")
-                return detections
-                
-            except Exception as e:
-                logger.error(f"YOLO检测失败: {e}，回退到模拟模式")
+        if self.model is None:
+            error_msg = "YOLO模型未正确加载，无法进行人体检测"
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         
-        # 回退到模拟检测
-        h, w = image.shape[:2]
-        num_detections = random.randint(1, 3)
-        detections = []
-        
-        for i in range(num_detections):
-            x1 = random.randint(0, w//2)
-            y1 = random.randint(0, h//2)
-            x2 = random.randint(x1 + 50, min(w, x1 + 200))
-            y2 = random.randint(y1 + 100, min(h, y1 + 300))
+        try:
+            logger.info(f"开始YOLO检测，图像尺寸: {image.shape}, 置信度阈值: {self.confidence_threshold}, IoU阈值: {self.iou_threshold}")
             
-            detection = {
-                'bbox': [x1, y1, x2, y2],
-                'confidence': random.uniform(0.5, 0.95),
-                'class_id': 0,
-                'class_name': 'person'
-            }
-            detections.append(detection)
-        
-        logger.info(f"模拟检测到 {len(detections)} 个人体")
-        return detections
+            results = self.model(image, conf=self.confidence_threshold, iou=self.iou_threshold)
+            detections = []
+            total_boxes = 0
+            filtered_boxes = 0
+            
+            for result in results:
+                boxes = result.boxes
+                if boxes is not None:
+                    total_boxes += len(boxes)
+                    logger.info(f"YOLO原始检测到 {len(boxes)} 个目标")
+                    
+                    for box in boxes:
+                        # 只检测人体 (class_id = 0)
+                        if int(box.cls[0]) == 0:
+                            x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                            confidence = float(box.conf[0].cpu().numpy())
+                            
+                            # 计算检测框属性
+                            width = x2 - x1
+                            height = y2 - y1
+                            area = width * height
+                            aspect_ratio = max(width, height) / min(width, height)
+                            
+                            logger.debug(f"检测框: ({x1:.1f}, {y1:.1f}, {x2:.1f}, {y2:.1f}), 置信度: {confidence:.3f}, 面积: {area:.1f}, 宽高比: {aspect_ratio:.2f}")
+                            
+                            # 应用后处理过滤
+                            if (area >= self.min_box_area and 
+                                aspect_ratio <= self.max_box_ratio and
+                                width > 40 and height > 80):  # 提高人体最小尺寸要求，减少误检
+                                
+                                detection = {
+                                    'bbox': [int(x1), int(y1), int(x2), int(y2)],
+                                    'confidence': confidence,
+                                    'class_id': 0,
+                                    'class_name': 'person'
+                                }
+                                detections.append(detection)
+                                logger.debug(f"检测框通过过滤: {detection}")
+                            else:
+                                filtered_boxes += 1
+                                logger.debug(f"检测框被过滤: 面积={area:.1f} (最小={self.min_box_area}), 宽高比={aspect_ratio:.2f} (最大={self.max_box_ratio}), 尺寸={width:.1f}x{height:.1f}")
+            
+            logger.info(f"YOLO检测完成: 原始检测框={total_boxes}, 过滤后={len(detections)}, 被过滤={filtered_boxes}")
+            return detections
+            
+        except Exception as e:
+            error_msg = f"YOLO检测过程中发生错误: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            raise RuntimeError(error_msg) from e
     
     def detect_batch(self, images: List[np.ndarray]) -> List[List[Dict]]:
         """

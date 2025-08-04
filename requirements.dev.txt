@@ -1,15 +1,18 @@
+# 开发环境依赖（建议先安装 torch 再安装其余依赖）
+# ➜ 如使用 macOS/CPU 或 Apple Silicon，可通过官方 nightlies 安装：
+# pip install --pre torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+
 # 深度学习框架
-# torch>=2.0.0
-# torchvision>=0.15.0
-# torchaudio>=2.0.0  # 暂时注释，网络问题
+torch>=2.2.0
+torchvision>=0.17.0
+torchaudio>=2.2.0
 
 # 计算机视觉
 opencv-python>=4.8.0
-# mediapipe>=0.10.0  # 暂时注释，依赖冲突
 Pillow>=9.5.0
 
 # 目标检测
-ultralytics>=8.0.0  # YOLOv8
+ultralytics>=8.0.0
 
 # 数据处理
 numpy>=1.24.0,<2.0
