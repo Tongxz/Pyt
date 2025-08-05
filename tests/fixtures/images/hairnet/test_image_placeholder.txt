@@ -1,0 +1,22 @@
+# 测试图片占位符
+
+由于原始测试图片目录为空，这里提供一个占位符文件。
+
+要测试训练好的发网检测模型，您可以：
+
+1. 将测试图片放入此目录：f:\Code\PythonCode\Pyt\tests\fixtures\images\hairnet\
+
+2. 使用以下命令测试模型：
+   ```
+   python test_hairnet_model.py --weights models/hairnet_detection.pt --source tests/fixtures/images/hairnet/your_image.jpg --view-img
+   ```
+
+3. 或者使用任何包含人员和发网的图片进行测试：
+   ```
+   python test_hairnet_model.py --weights models/hairnet_detection.pt --source path/to/your/image.jpg --view-img
+   ```
+
+模型可以检测以下类别：
+- hairnet（发网）
+- head（头部）
+- person（人员）
