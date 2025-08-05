@@ -170,11 +170,11 @@ detection:
   confidence_threshold: 0.5
   iou_threshold: 0.4
   max_detections: 100
-  
+
 tracking:
   max_disappeared: 30
   max_distance: 50
-  
+
 behavior:
   enabled_behaviors:
     - hairnet_detection

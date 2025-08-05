@@ -275,7 +275,7 @@
         <!-- 概览标签页 -->
         <div id="overview" class="tab-content active">
             <button class="refresh-btn" onclick="refreshData()">🔄 刷新数据</button>
-            
+
             <div class="stats-grid" id="statsGrid">
                 <div class="loading">正在加载统计数据...</div>
             </div>
@@ -340,16 +340,16 @@
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
+
             // 移除所有标签按钮的激活状态
             document.querySelectorAll('.nav-tab').forEach(btn => {
                 btn.classList.remove('active');
             });
-            
+
             // 显示选中的标签页
             document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
-            
+
             // 根据标签页加载相应数据
             if (tabName === 'trends') {
                 loadTrendsData();
@@ -375,7 +375,7 @@
                 const response = await fetch('http://localhost:8000/api/statistics/realtime');
                 const data = await response.json();
                 currentData.overview = data;
-                
+
                 renderStatsCards(data);
                 renderTodayChart(data);
             } catch (error) {
@@ -387,16 +387,16 @@
         // 渲染统计卡片
         function renderStatsCards(data) {
             const statsGrid = document.getElementById('statsGrid');
-            
+
             const today = data.today || {};
             const total = data.total || {};
-            
-            const todayComplianceRate = today.today_persons > 0 ? 
+
+            const todayComplianceRate = today.today_persons > 0 ?
                 ((today.today_with_hairnet || 0) / today.today_persons * 100).toFixed(1) : '0.0';
-            
-            const totalComplianceRate = total.total_persons > 0 ? 
+
+            const totalComplianceRate = total.total_persons > 0 ?
                 ((total.total_with_hairnet || 0) / total.total_persons * 100).toFixed(1) : '0.0';
-            
+
             statsGrid.innerHTML = `
                 <div class="stat-card info">
                     <div class="stat-value">${today.today_detections || 0}</div>
@@ -428,16 +428,16 @@
         // 渲染今日趋势图
         function renderTodayChart(data) {
             const ctx = document.getElementById('todayChart').getContext('2d');
-            
+
             if (charts.today) {
                 charts.today.destroy();
             }
-            
+
             // 模拟今日小时数据（实际应该从API获取）
             const hours = Array.from({length: 24}, (_, i) => i);
             const detections = hours.map(() => Math.floor(Math.random() * 20));
             const compliance = hours.map(() => Math.floor(Math.random() * 40 + 60));
-            
+
             charts.today = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -493,7 +493,7 @@
             try {
                 const response = await fetch('http://localhost:8000/api/statistics/daily?days=7');
                 const data = await response.json();
-                
+
                 renderComplianceChart(data);
                 renderVolumeChart(data);
             } catch (error) {
@@ -505,14 +505,14 @@
         // 渲染合规率趋势图
         function renderComplianceChart(data) {
             const ctx = document.getElementById('complianceChart').getContext('2d');
-            
+
             if (charts.compliance) {
                 charts.compliance.destroy();
             }
-            
+
             const labels = data.map(d => d.date).reverse();
             const rates = data.map(d => d.compliance_rate || 0).reverse();
-            
+
             charts.compliance = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -546,15 +546,15 @@
         // 渲染检测量统计图
         function renderVolumeChart(data) {
             const ctx = document.getElementById('volumeChart').getContext('2d');
-            
+
             if (charts.volume) {
                 charts.volume.destroy();
             }
-            
+
             const labels = data.map(d => d.date).reverse();
             const detections = data.map(d => d.total_detections || 0).reverse();
             const persons = data.map(d => d.total_persons || 0).reverse();
-            
+
             charts.volume = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -590,7 +590,7 @@
             try {
                 const response = await fetch('http://localhost:8000/api/statistics/history?limit=50');
                 const data = await response.json();
-                
+
                 renderHistoryTable(data);
             } catch (error) {
                 console.error('加载历史记录失败:', error);
@@ -601,20 +601,20 @@
         // 渲染历史记录表格
         function renderHistoryTable(data) {
             const tbody = document.getElementById('historyTableBody');
-            
+
             if (data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="loading">暂无历史记录</td></tr>';
                 return;
             }
-            
+
             tbody.innerHTML = data.map(record => {
-                const complianceRate = record.total_persons > 0 ? 
+                const complianceRate = record.total_persons > 0 ?
                     (record.persons_with_hairnet / record.total_persons * 100).toFixed(1) : '0.0';
-                
+
                 const isCompliant = parseFloat(complianceRate) >= 90;
                 const statusClass = isCompliant ? 'status-compliant' : 'status-non-compliant';
                 const statusText = isCompliant ? '合规' : '不合规';
-                
+
                 return `
                     <tr>
                         <td>${new Date(record.timestamp).toLocaleString('zh-CN')}</td>
@@ -633,10 +633,10 @@
             const errorDiv = document.createElement('div');
             errorDiv.className = 'error';
             errorDiv.textContent = message;
-            
+
             const container = document.querySelector('.container');
             container.insertBefore(errorDiv, container.firstChild);
-            
+
             setTimeout(() => {
                 errorDiv.remove();
             }, 5000);
@@ -645,7 +645,7 @@
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
             loadOverviewData();
-            
+
             // 每30秒自动刷新概览数据
             setInterval(() => {
                 if (document.getElementById('overview').classList.contains('active')) {

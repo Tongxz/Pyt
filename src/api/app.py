@@ -1,33 +1,33 @@
 # FastAPI application
 # FastAPI应用主文件
 
-from fastapi import (
-    FastAPI,
-    WebSocket,
-    WebSocketDisconnect,
-    UploadFile,
-    File,
-    HTTPException,
-)
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
-import logging
 import asyncio
+import base64
 import json
-import cv2
-import numpy as np
-from typing import Dict, Any, List, Optional
-import base64
-from io import BytesIO
-from PIL import Image
-from datetime import datetime
-import base64
-from pathlib import Path
+import logging
+import os
 
 # 导入检测器
 import sys
-import os
+from datetime import datetime
+from io import BytesIO
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import cv2
+import numpy as np
+from fastapi import (
+    FastAPI,
+    File,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from PIL import Image
 
 # 添加项目根目录到Python路径
 project_root = os.path.dirname(
@@ -115,30 +115,30 @@ class FallbackHairnetDetectionPipeline:
             ],
             "average_confidence": confidence,
         }
-        
+
     def detect(self, frame):
         # 添加与YOLOHairnetDetector兼容的detect方法
         import random
-        
+
         has_hairnet = random.choice([True, False])  # 随机模拟
         confidence = random.uniform(0.6, 0.9)
-        
+
         return {
             "wearing_hairnet": has_hairnet,
             "confidence": confidence,
-            "head_roi_coords": [100, 100, 200, 300]
+            "head_roi_coords": [100, 100, 200, 300],
         }
-    
+
     def detect_hairnet(self, frame):
         # 添加与YOLOHairnetDetector兼容的detect_hairnet方法
         return self.detect(frame)
-    
+
     def get_stats(self):
         # 添加与YOLOHairnetDetector兼容的get_stats方法
         return {
             "model_path": "fallback_model",
             "confidence_threshold": 0.5,
-            "device": "cpu"
+            "device": "cpu",
         }
 
 
@@ -171,8 +171,8 @@ class FallbackDetectionDataManager:
 
 
 try:
-    from src.core.detector import HumanDetector
     from src.core.data_manager import DetectionDataManager
+    from src.core.detector import HumanDetector
 
     logger.info("成功导入核心模块")
 except ImportError as e:
@@ -180,7 +180,7 @@ except ImportError as e:
     # 使用备用类
     HumanDetector = FallbackHumanDetector
     DetectionDataManager = FallbackDetectionDataManager
-    
+
 # 备用检测管道已在前面定义，无需额外操作
 
 # 创建FastAPI应用
@@ -334,7 +334,15 @@ def visualize_hairnet_detections(image, detections):
         # 人体框使用青色
         cv2.rectangle(annotated_image, (x1, y1), (x2, y2), (255, 255, 0), 2)
         # 编号标注
-        cv2.putText(annotated_image, f"P{idx}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+        cv2.putText(
+            annotated_image,
+            f"P{idx}",
+            (x1, y1 - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 0),
+            2,
+        )
 
     # ------------- 绘制发网框 -------------
     for d_idx, detection in enumerate(detections, 1):
@@ -368,9 +376,7 @@ def visualize_hairnet_detections(image, detections):
             cv2.circle(
                 annotated_image, (center_x, center_y), 18, (255, 255, 0), -1
             )  # 青色背景
-            cv2.circle(
-                annotated_image, (center_x, center_y), 18, (0, 0, 0), 2
-            )  # 黑色边框
+            cv2.circle(annotated_image, (center_x, center_y), 18, (0, 0, 0), 2)  # 黑色边框
             cv2.putText(
                 annotated_image,
                 str(d_idx),
@@ -380,7 +386,6 @@ def visualize_hairnet_detections(image, detections):
                 (0, 0, 0),
                 2,
             )  # 黑色数字
-
 
             # 准备标签信息（使用英文避免乱码）
             person_label = f"Person #{d_idx}"
@@ -567,17 +572,21 @@ async def startup_event():
         # 优先尝试初始化 HumanDetector，若失败则回退到 FallbackHumanDetector
         try:
             from core.detector import HumanDetector as RealHumanDetector
+
             detector = RealHumanDetector(
                 model_path=os.environ.get("HUMAN_MODEL_PATH", "yolov8n.pt"),
-                device=os.environ.get("HUMAN_DEVICE", "auto")
+                device=os.environ.get("HUMAN_DEVICE", "auto"),
             )
             # 仅对 HumanDetector 实例设置参数
-            detector.confidence_threshold = float(os.environ.get("HUMAN_CONF_THRES", "0.2"))
+            detector.confidence_threshold = float(
+                os.environ.get("HUMAN_CONF_THRES", "0.2")
+            )
             detector.min_box_area = int(os.environ.get("HUMAN_MIN_BOX_AREA", "600"))
             detector.max_box_ratio = float(os.environ.get("HUMAN_MAX_BOX_RATIO", "6.0"))
         except Exception:
             # 回退到 FallbackHumanDetector（无参数可调）
             from core.detector import FallbackHumanDetector
+
             detector = FallbackHumanDetector()
 
         # 使用发网检测器工厂创建YOLOv8检测器
@@ -600,9 +609,9 @@ async def startup_event():
                     model_path=model_path,
                     device=device,
                     conf_thres=conf_thres,
-                    iou_thres=iou_thres
+                    iou_thres=iou_thres,
                 )
-                
+
                 logger.info("成功创建YOLOv8发网检测器")
                 # 直接使用YOLOv8检测器作为管道
                 hairnet_pipeline = hairnet_detector
@@ -617,14 +626,14 @@ async def startup_event():
         # 初始化数据管理器
         try:
             from core.data_manager import DetectionDataManager
-            
+
             # 如果YOLOv8检测器创建失败，将使用备用检测器
             if hairnet_pipeline is None:
                 logger.warning("YOLOv8检测器创建失败，使用备用检测器")
                 hairnet_pipeline = FallbackHairnetDetectionPipeline(
                     detector, FallbackSimpleHairnetDetector()
                 )
-                
+
             data_manager = DetectionDataManager()
             logger.info("检测器初始化成功")
         except Exception as e:
@@ -1004,8 +1013,8 @@ async def detect_hairnet_video(file: UploadFile = File(...)):
 
     try:
         # 保存临时视频文件
-        import tempfile
         import os
+        import tempfile
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
             contents = await file.read()
@@ -1393,9 +1402,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                     results["average_confidence"] = confidence
                                 else:
                                     # 如果结果不是字典，使用默认结果
-                                    logger.warning(
-                                        "WebSocket: YOLOv8检测器返回的结果不是字典类型"
-                                    )
+                                    logger.warning("WebSocket: YOLOv8检测器返回的结果不是字典类型")
                                     results = {
                                         "total_persons": 0,
                                         "persons_with_hairnet": 0,
@@ -1472,9 +1479,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
                                 # 确保结果是字典类型
                                 if not isinstance(results, dict):
-                                    logger.warning(
-                                        "WebSocket: 传统检测管道返回的结果不是字典类型"
-                                    )
+                                    logger.warning("WebSocket: 传统检测管道返回的结果不是字典类型")
                                     results = {
                                         "total_persons": 0,
                                         "persons_with_hairnet": 0,

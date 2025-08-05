@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Pytest配置文件
 
@@ -8,12 +7,13 @@ Pytest配置文件
 
 # 添加pytest标记功能，用于跳过特定测试
 
-import pytest
-import cv2
-import numpy as np
-from pathlib import Path
 import os
 import sys
+from pathlib import Path
+
+import cv2
+import numpy as np
+import pytest
 
 # 添加项目根目录到Python路径
 sys.path.append(str(Path(__file__).parent.parent))
@@ -33,7 +33,7 @@ def get_test_images_dir() -> Path:
 def sample_person_image():
     """加载测试人物图像"""
     image_path = get_test_images_dir() / "person" / "test_person.jpg"
-    
+
     # 如果图像不存在，创建一个测试图像
     if not image_path.exists():
         # 创建一个简单的测试图像
@@ -44,7 +44,7 @@ def sample_person_image():
         # 保存图像
         os.makedirs(image_path.parent, exist_ok=True)
         cv2.imwrite(str(image_path), img)
-    
+
     return cv2.imread(str(image_path))
 
 
@@ -52,7 +52,7 @@ def sample_person_image():
 def sample_hairnet_image():
     """加载测试发网图像"""
     image_path = get_test_images_dir() / "hairnet" / "test_hairnet.jpg"
-    
+
     # 如果图像不存在，创建一个测试图像
     if not image_path.exists():
         # 创建一个简单的测试图像
@@ -68,7 +68,7 @@ def sample_hairnet_image():
         # 保存图像
         os.makedirs(image_path.parent, exist_ok=True)
         cv2.imwrite(str(image_path), img)
-    
+
     return cv2.imread(str(image_path))
 
 
@@ -82,26 +82,26 @@ def sample_empty_image():
 def mock_human_detector(monkeypatch):
     """模拟人体检测器"""
     from src.core.detector import HumanDetector
-    
+
     # 创建模拟检测器
     mock_detector = pytest.Mock(spec=HumanDetector)
-    
+
     # 模拟检测方法
     def mock_detect(image):
         return [
             {
-                'bbox': [100, 50, 300, 400],
-                'confidence': 0.95,
-                'class_id': 0,
-                'class_name': 'person'
+                "bbox": [100, 50, 300, 400],
+                "confidence": 0.95,
+                "class_id": 0,
+                "class_name": "person",
             }
         ]
-    
+
     mock_detector.detect.side_effect = mock_detect
-    
+
     # 替换检测器类
-    monkeypatch.setattr('src.core.detector.HumanDetector', lambda: mock_detector)
-    
+    monkeypatch.setattr("src.core.detector.HumanDetector", lambda: mock_detector)
+
     return mock_detector
 
 
@@ -115,19 +115,17 @@ def pytest_collection_modifyitems(items):
         "test_confidence_threshold",
         "test_preprocess_image",
         "test__preprocess_image",
-        
         # HairnetDetectionPipeline测试
         "test_detect_hairnet_compliance_with_mock_detections",
         "test_get_detection_statistics",
         "test_visualize_detections",
         "testcalculate_compliance_rate",
-        
         # 其他测试
         "test_init",
         "test_model_fallback",
         "test_dual_channel_detection",
     ]
-    
+
     for item in items:
         if item.name in skip_tests:
             item.add_marker(pytest.mark.skip(reason="接口变更，暂时跳过"))

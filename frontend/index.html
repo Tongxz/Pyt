@@ -107,7 +107,7 @@
             color: #666;
             margin-bottom: 0.5rem;
         }
-        
+
         .upload-formats {
             font-size: 0.9rem;
             color: #888;
@@ -407,15 +407,15 @@
             color: #2563eb;
             margin-bottom: 0.5rem;
         }
-        
+
         .compliance-good {
             color: #16a34a !important;
         }
-        
+
         .compliance-medium {
             color: #ea580c !important;
         }
-        
+
         .compliance-poor {
             color: #dc2626 !important;
         }
@@ -423,11 +423,11 @@
         .info-value.good {
             color: #27ae60;
         }
-        
+
         .info-value.warning {
             color: #f39c12;
         }
-        
+
         .info-value.danger {
             color: #e74c3c;
         }
@@ -458,15 +458,15 @@
             color: #2c3e50;
             margin-bottom: 10px;
         }
-        
+
         .stat-value.good {
             color: #27ae60;
         }
-        
+
         .stat-value.warning {
             color: #f39c12;
         }
-        
+
         .stat-value.danger {
             color: #e74c3c;
         }
@@ -483,46 +483,46 @@
             border-radius: 5px;
             font-size: 0.9em;
         }
-        
+
         .detection.compliant {
             background: #d4edda;
             border-left: 4px solid #28a745;
         }
-        
+
         .detection.non-compliant {
             background: #f8d7da;
             border-left: 4px solid #dc3545;
         }
-        
+
         .summary {
             display: flex;
             gap: 15px;
             margin: 10px 0;
             font-size: 0.9em;
         }
-        
+
         .with-hairnet {
             color: #28a745;
             font-weight: 600;
         }
-        
+
         .without-hairnet {
             color: #dc3545;
             font-weight: 600;
         }
-        
+
         .compliance {
             padding: 4px 8px;
             border-radius: 12px;
             font-size: 0.8em;
             font-weight: 600;
         }
-        
+
         .compliance.good {
             background: #d4edda;
             color: #155724;
         }
-        
+
         .compliance.warning {
             background: #fff3cd;
             color: #856404;
@@ -583,11 +583,11 @@
                 flex-direction: column;
                 padding: 1rem;
             }
-            
+
             .header h1 {
                 font-size: 2rem;
             }
-            
+
             .detection-info {
                 grid-template-columns: 1fr;
             }
@@ -604,7 +604,7 @@
         <!-- 图像/视频上传检测区域 -->
         <div class="upload-section">
             <h2 class="section-title">📷 图像/视频检测</h2>
-            
+
             <!-- 文件类型选择 -->
             <div class="file-type-selector">
                 <label class="radio-option">
@@ -616,19 +616,19 @@
                     <span class="radio-label">🎬 视频检测</span>
                 </label>
             </div>
-            
+
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text" id="uploadText">点击或拖拽图片到此处</div>
                 <div class="upload-formats" id="uploadFormats">支持 JPG、PNG、GIF 格式</div>
                 <input type="file" id="fileInput" class="file-input" accept="image/*">
             </div>
-            
+
             <div class="controls">
                 <button class="btn" id="uploadBtn">选择文件</button>
                 <button class="btn" id="detectBtn" disabled>开始检测</button>
             </div>
-            
+
             <div id="uploadStatus"></div>
             <div id="uploadResult"></div>
         </div>
@@ -636,20 +636,20 @@
         <!-- 实时检测区域 -->
         <div class="realtime-section">
             <h2 class="section-title">📹 实时检测</h2>
-            
+
             <div class="video-container">
                 <video id="videoElement" class="video-element" autoplay muted></video>
                 <canvas id="canvasOverlay" class="canvas-overlay"></canvas>
             </div>
-            
+
             <div class="controls">
                 <button class="btn" id="startBtn">开启摄像头</button>
                 <button class="btn" id="stopBtn" disabled>停止检测</button>
             </div>
-            
+
             <div id="realtimeStatus"></div>
             <div id="realtimeResult"></div>
-            
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value" id="totalDetections">0</div>

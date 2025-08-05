@@ -123,11 +123,11 @@
 <body>
     <div class="container">
         <h1>YOLOv8发网检测测试</h1>
-        
+
         <div class="detector-type" id="detector-info">
             <p>正在检查检测器类型...</p>
         </div>
-        
+
         <div class="test-section">
             <div class="upload-section">
                 <h2>上传图片</h2>
@@ -145,7 +145,7 @@
                     <p>正在处理图片...</p>
                 </div>
             </div>
-            
+
             <div class="result-section">
                 <h2>检测结果</h2>
                 <div id="result-container">
@@ -177,56 +177,56 @@
                     console.error('获取检测器信息失败:', error);
                     document.getElementById('detector-info').innerHTML = '<p>获取检测器信息失败</p>';
                 });
-            
+
             const uploadBox = document.getElementById('upload-box');
             const fileInput = document.getElementById('file-input');
             const detectBtn = document.getElementById('detect-btn');
             const resultContainer = document.getElementById('result-container');
             const loading = document.getElementById('loading');
-            
+
             let selectedFile = null;
-            
+
             // 点击上传框选择文件
             uploadBox.addEventListener('click', () => {
                 fileInput.click();
             });
-            
+
             // 拖放文件
             uploadBox.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 uploadBox.style.borderColor = '#2ecc71';
             });
-            
+
             uploadBox.addEventListener('dragleave', () => {
                 uploadBox.style.borderColor = '#3498db';
             });
-            
+
             uploadBox.addEventListener('drop', (e) => {
                 e.preventDefault();
                 uploadBox.style.borderColor = '#3498db';
-                
+
                 if (e.dataTransfer.files.length) {
                     handleFile(e.dataTransfer.files[0]);
                 }
             });
-            
+
             // 文件选择处理
             fileInput.addEventListener('change', () => {
                 if (fileInput.files.length) {
                     handleFile(fileInput.files[0]);
                 }
             });
-            
+
             // 处理选择的文件
             function handleFile(file) {
                 if (!file.type.match('image/jpeg') && !file.type.match('image/png')) {
                     alert('请选择JPG或PNG格式的图片');
                     return;
                 }
-                
+
                 selectedFile = file;
                 detectBtn.disabled = false;
-                
+
                 // 显示预览
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -238,17 +238,17 @@
                 };
                 reader.readAsDataURL(file);
             }
-            
+
             // 发送检测请求
             detectBtn.addEventListener('click', () => {
                 if (!selectedFile) return;
-                
+
                 loading.style.display = 'block';
                 detectBtn.disabled = true;
-                
+
                 const formData = new FormData();
                 formData.append('file', selectedFile);
-                
+
                 fetch('/api/v1/detect/hairnet', {
                     method: 'POST',
                     body: formData
@@ -257,7 +257,7 @@
                 .then(data => {
                     loading.style.display = 'none';
                     detectBtn.disabled = false;
-                    
+
                     // 显示检测结果
                     displayResults(data);
                 })
@@ -273,30 +273,30 @@
                     `;
                 });
             });
-            
+
             // 显示检测结果
             function displayResults(data) {
                 if (!data) {
                     resultContainer.innerHTML = '<p>未获取到检测结果</p>';
                     return;
                 }
-                
+
                 let resultHTML = '<h3>检测结果</h3>';
-                
+
                 // 添加结果图片
                 if (data.annotated_image) {
                     resultHTML += `<img src="data:image/jpeg;base64,${data.annotated_image}" class="result-image" alt="检测结果">`;
                 } else if (data.result_image) {
                     resultHTML += `<img src="data:image/jpeg;base64,${data.result_image}" class="result-image" alt="检测结果">`;
                 }
-                
+
                 // 添加统计数据
                 let totalPersons = 0;
                 let personsWithHairnet = 0;
                 let personsWithoutHairnet = 0;
                 let complianceRate = 0;
                 let averageConfidence = 0;
-                
+
                 // 检查数据结构，兼容不同的返回格式
                 if (data.detections && typeof data.detections === 'object') {
                     // 如果detections是对象而不是数组，可能是嵌套的结构
@@ -323,7 +323,7 @@
                     complianceRate = data.compliance_rate || 0;
                     averageConfidence = data.average_confidence || 0;
                 }
-                
+
                 resultHTML += `
                     <div class="result-data">
                         <h3>统计信息</h3>
@@ -334,10 +334,10 @@
                         <p><strong>平均置信度:</strong> ${(averageConfidence * 100).toFixed(2)}%</p>
                     </div>
                 `;
-                
+
                 // 添加详细检测结果
                 let detectionsList = [];
-                
+
                 // 确定正确的检测结果列表
                 if (data.detections) {
                     if (Array.isArray(data.detections)) {
@@ -348,20 +348,20 @@
                         detectionsList = data.detections.detections;
                     }
                 }
-                
+
                 if (detectionsList.length > 0) {
                     resultHTML += `
                         <div class="result-data">
                             <h3>详细检测</h3>
                             <ul>
                     `;
-                    
+
                     detectionsList.forEach((detection, index) => {
                         // 安全地访问属性
                         const hasHairnet = detection.has_hairnet !== undefined ? detection.has_hairnet : false;
-                        const confidence = detection.confidence !== undefined ? detection.confidence : 
+                        const confidence = detection.confidence !== undefined ? detection.confidence :
                                           (detection.hairnet_confidence !== undefined ? detection.hairnet_confidence : 0);
-                        
+
                         // 安全地处理bbox
                         let bboxStr = '未知';
                         if (detection.bbox) {
@@ -375,7 +375,7 @@
                                 console.error('处理边界框数据出错:', e);
                             }
                         }
-                        
+
                         resultHTML += `
                             <li>
                                 <p><strong>人物 #${index + 1}</strong></p>
@@ -385,13 +385,13 @@
                             </li>
                         `;
                     });
-                    
+
                     resultHTML += `
                             </ul>
                         </div>
                     `;
                 }
-                
+
                 resultContainer.innerHTML = resultHTML;
             }
         });

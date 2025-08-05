@@ -6,7 +6,7 @@ class HumanDetectionApp {
         this.videoStream = null;
         this.isDetecting = false;
         this.detectionInterval = null;
-        
+
         this.initializeElements();
         this.bindEvents();
         this.updateUIForFileType(); // 初始化UI状态
@@ -24,7 +24,7 @@ class HumanDetectionApp {
         this.uploadText = document.getElementById('uploadText');
         this.uploadFormats = document.getElementById('uploadFormats');
         this.fileTypeRadios = document.querySelectorAll('input[name="fileType"]');
-        
+
         // 实时检测相关元素
         this.videoElement = document.getElementById('videoElement');
         this.canvasOverlay = document.getElementById('canvasOverlay');
@@ -32,7 +32,7 @@ class HumanDetectionApp {
         this.stopBtn = document.getElementById('stopBtn');
         this.realtimeStatus = document.getElementById('realtimeStatus');
         this.realtimeResult = document.getElementById('realtimeResult');
-        
+
         // 当前选择的文件类型
         this.currentFileType = 'image';
     }
@@ -42,17 +42,17 @@ class HumanDetectionApp {
         this.fileTypeRadios.forEach(radio => {
             radio.addEventListener('change', this.handleFileTypeChange.bind(this));
         });
-        
+
         // 图像/视频上传事件
         this.uploadArea.addEventListener('click', () => this.fileInput.click());
         this.uploadArea.addEventListener('dragover', this.handleDragOver.bind(this));
         this.uploadArea.addEventListener('dragleave', this.handleDragLeave.bind(this));
         this.uploadArea.addEventListener('drop', this.handleDrop.bind(this));
-        
+
         this.fileInput.addEventListener('change', this.handleFileSelect.bind(this));
         this.uploadBtn.addEventListener('click', () => this.fileInput.click());
         this.detectBtn.addEventListener('click', this.detectFile.bind(this));
-        
+
         // 实时检测事件
         this.startBtn.addEventListener('click', this.startRealTimeDetection.bind(this));
         this.stopBtn.addEventListener('click', this.stopRealTimeDetection.bind(this));
@@ -63,7 +63,7 @@ class HumanDetectionApp {
         try {
             const response = await fetch(`${this.apiBaseUrl}/health`);
             const data = await response.json();
-            
+
             if (data.status === 'healthy') {
                 this.showStatus('uploadStatus', '✅ API服务连接正常', 'success');
                 this.showStatus('realtimeStatus', '✅ 实时检测服务就绪', 'success');
@@ -91,7 +91,7 @@ class HumanDetectionApp {
     handleDrop(e) {
         e.preventDefault();
         this.uploadArea.classList.remove('dragover');
-        
+
         const files = e.dataTransfer.files;
         if (files.length > 0) {
             this.handleFile(files[0]);
@@ -110,7 +110,7 @@ class HumanDetectionApp {
     handleFileTypeChange(e) {
         this.currentFileType = e.target.value;
         this.updateUIForFileType();
-        
+
         // 清除已选择的文件
         this.selectedFile = null;
         this.fileInput.value = '';
@@ -118,7 +118,7 @@ class HumanDetectionApp {
         this.uploadResult.innerHTML = '';
         this.showStatus('uploadStatus', '', '');
     }
-    
+
     // 根据文件类型更新UI
     updateUIForFileType() {
         if (this.currentFileType === 'image') {
@@ -139,7 +139,7 @@ class HumanDetectionApp {
             this.showStatus('uploadStatus', '❌ 请选择有效的图片文件', 'error');
             return;
         }
-        
+
         if (this.currentFileType === 'video' && !file.type.startsWith('video/')) {
             this.showStatus('uploadStatus', '❌ 请选择有效的视频文件', 'error');
             return;
@@ -152,12 +152,12 @@ class HumanDetectionApp {
 
         this.selectedFile = file;
         this.detectBtn.disabled = false;
-        
+
         // 显示文件信息
         const fileSize = (file.size / 1024 / 1024).toFixed(2);
         const fileType = this.currentFileType === 'image' ? '图片' : '视频';
         this.showStatus('uploadStatus', `✅ 已选择${fileType}: ${file.name} (${fileSize}MB)`, 'success');
-        
+
         // 预览文件
         if (this.currentFileType === 'image') {
             const reader = new FileReader();
@@ -202,8 +202,8 @@ class HumanDetectionApp {
             formData.append('file', this.selectedFile);
 
             // 根据文件类型选择不同的API端点
-            const endpoint = this.currentFileType === 'image' 
-                ? '/api/v1/detect/hairnet' 
+            const endpoint = this.currentFileType === 'image'
+                ? '/api/v1/detect/hairnet'
                 : '/api/v1/detect/hairnet/video';
 
             const response = await fetch(`${this.apiBaseUrl}${endpoint}`, {
@@ -230,9 +230,9 @@ class HumanDetectionApp {
     // 显示检测结果
     displayDetectionResult(result) {
         const fileType = this.currentFileType === 'image' ? '图片' : '视频';
-        
+
         let detectionData;
-        
+
         // 根据文件类型处理不同的数据结构
         if (this.currentFileType === 'video') {
             // 视频检测返回的数据结构
@@ -241,14 +241,14 @@ class HumanDetectionApp {
             // 图片检测返回的数据结构
             detectionData = result.detections || {};
         }
-        
+
         // 发网检测结果数据
         const totalPersons = detectionData.total_persons || 0;
         const personsWithHairnet = detectionData.persons_with_hairnet || 0;
         const personsWithoutHairnet = detectionData.persons_without_hairnet || 0;
         const complianceRate = detectionData.compliance_rate || 0;
         const avgConfidence = detectionData.average_confidence || 0;
-        
+
         // 视频特有信息
         let additionalInfo = '';
         if (this.currentFileType === 'video' && result.video_info) {
@@ -263,7 +263,7 @@ class HumanDetectionApp {
                 </div>
             `;
         }
-        
+
         // 显示带标注的结果图片
         let annotatedImageHtml = '';
         if (result.annotated_image) {
@@ -297,7 +297,7 @@ class HumanDetectionApp {
                 </div>
             `;
         }
-        
+
         this.uploadResult.innerHTML = `
             <div class="result-container">
                 <h3>🔍 ${fileType}发网检测结果</h3>
@@ -336,22 +336,22 @@ class HumanDetectionApp {
             this.videoStream = await navigator.mediaDevices.getUserMedia({
                 video: { width: 640, height: 480 }
             });
-            
+
             this.videoElement.srcObject = this.videoStream;
             this.setupCanvas();
-            
+
             // 连接WebSocket
             this.connectWebSocket();
-            
+
             this.startBtn.disabled = true;
             this.stopBtn.disabled = false;
             this.isDetecting = true;
-            
+
             this.showStatus('realtimeStatus', '✅ 实时检测已启动', 'success');
-            
+
             // 开始发送视频帧进行检测
             this.startFrameCapture();
-            
+
         } catch (error) {
             this.showStatus('realtimeStatus', `❌ 启动失败: ${error.message}`, 'error');
             console.error('启动实时检测失败:', error);
@@ -361,28 +361,28 @@ class HumanDetectionApp {
     // 停止实时检测
     stopRealTimeDetection() {
         this.isDetecting = false;
-        
+
         if (this.detectionInterval) {
             clearInterval(this.detectionInterval);
             this.detectionInterval = null;
         }
-        
+
         if (this.websocket) {
             this.websocket.close();
             this.websocket = null;
         }
-        
+
         if (this.videoStream) {
             this.videoStream.getTracks().forEach(track => track.stop());
             this.videoStream = null;
         }
-        
+
         this.videoElement.srcObject = null;
         this.clearCanvas();
-        
+
         this.startBtn.disabled = false;
         this.stopBtn.disabled = true;
-        
+
         this.showStatus('realtimeStatus', '⏹️ 实时检测已停止', 'info');
         this.realtimeResult.innerHTML = '';
     }
@@ -391,7 +391,7 @@ class HumanDetectionApp {
     setupCanvas() {
         const video = this.videoElement;
         const canvas = this.canvasOverlay;
-        
+
         video.addEventListener('loadedmetadata', () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -410,27 +410,27 @@ class HumanDetectionApp {
     // 连接WebSocket
     connectWebSocket() {
         const wsUrl = this.apiBaseUrl.replace('http', 'ws') + '/ws';
-        
+
         // 如果已有连接，先关闭
         if (this.websocket) {
             this.websocket.close();
         }
-        
+
         this.websocket = new WebSocket(wsUrl);
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 1000;
-        
+
         this.websocket.onopen = () => {
             console.log('WebSocket连接已建立');
             this.reconnectAttempts = 0;
             this.showStatus('realtimeStatus', '✅ WebSocket连接成功', 'success');
         };
-        
+
         this.websocket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                
+
                 if (data.type === 'hairnet_detection_result') {
                     this.handleHairnetRealtimeResult(data);
                 } else if (data.type === 'detection_result') {
@@ -446,22 +446,22 @@ class HumanDetectionApp {
                 console.error('WebSocket消息解析错误:', error);
             }
         };
-        
+
         this.websocket.onerror = (error) => {
             console.error('WebSocket错误:', error);
             this.showStatus('realtimeStatus', '❌ WebSocket连接错误', 'error');
         };
-        
+
         this.websocket.onclose = (event) => {
             console.log('WebSocket连接已关闭', event.code, event.reason);
-            
+
             // 如果是正在检测且不是正常关闭，尝试重连
             if (this.isDetecting && event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
                 this.reconnectAttempts++;
                 const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1); // 指数退避
-                
+
                 this.showStatus('realtimeStatus', `🔄 重连中... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`, 'warning');
-                
+
                 setTimeout(() => {
                     if (this.isDetecting) {
                         this.connectWebSocket();
@@ -488,18 +488,18 @@ class HumanDetectionApp {
         const video = this.videoElement;
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        
+
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        
+
         ctx.drawImage(video, 0, 0);
-        
+
         canvas.toBlob((blob) => {
             if (!blob) {
                 console.error('Canvas toBlob failed - blob is null');
                 return;
             }
-            
+
             const reader = new FileReader();
             reader.onload = () => {
                 const base64 = reader.result;
@@ -524,12 +524,12 @@ class HumanDetectionApp {
             const link = document.createElement('a');
             link.href = `data:image/jpeg;base64,${base64Data}`;
             link.download = `hairnet_detection_${new Date().getTime()}.jpg`;
-            
+
             // 触发下载
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             // 显示成功提示
             this.showNotification('📥 标注图片已下载', 'success');
         } catch (error) {
@@ -544,7 +544,7 @@ class HumanDetectionApp {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;
-        
+
         // 添加样式
         notification.style.cssText = `
             position: fixed;
@@ -558,7 +558,7 @@ class HumanDetectionApp {
             animation: slideIn 0.3s ease-out;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         `;
-        
+
         // 根据类型设置背景色
         switch(type) {
             case 'success':
@@ -570,10 +570,10 @@ class HumanDetectionApp {
             default:
                 notification.style.backgroundColor = '#3b82f6';
         }
-        
+
         // 添加到页面
         document.body.appendChild(notification);
-        
+
         // 3秒后自动移除
         setTimeout(() => {
             notification.style.animation = 'slideOut 0.3s ease-in';
@@ -588,29 +588,29 @@ class HumanDetectionApp {
     // 处理发网检测实时结果
     handleHairnetRealtimeResult(data) {
         const { detections, detection_count } = data;
-        
+
         // 确保detections是数组
         const detectionsArray = Array.isArray(detections) ? detections : [];
-        
+
         // 在画布上绘制检测框
         this.drawHairnetDetections(detectionsArray);
-        
+
         // 统计发网佩戴情况
         const withHairnet = detectionsArray.filter(d => d.has_hairnet).length;
         const withoutHairnet = detection_count - withHairnet;
         const complianceRate = detection_count > 0 ? (withHairnet / detection_count * 100).toFixed(1) : '0.0';
-        
+
         // 更新检测信息
         let confidenceSum = 0;
         let maxConfidence = 0;
-        
+
         detectionsArray.forEach(detection => {
             confidenceSum += (detection.hairnet_confidence || 0);
             maxConfidence = Math.max(maxConfidence, (detection.hairnet_confidence || 0));
         });
-        
+
         const avgConfidence = detectionsArray.length > 0 ? confidenceSum / detectionsArray.length : 0;
-        
+
         this.realtimeResult.innerHTML = `
             <div class="detection-info">
                 <div class="info-card">
@@ -640,21 +640,21 @@ class HumanDetectionApp {
     // 处理实时检测结果
     handleRealtimeResult(data) {
         const { detections, detection_count } = data;
-        
+
         // 在画布上绘制检测框
         this.drawDetections(detections);
-        
+
         // 更新检测信息
         let confidenceSum = 0;
         let maxConfidence = 0;
-        
+
         detections.forEach(detection => {
             confidenceSum += detection.confidence;
             maxConfidence = Math.max(maxConfidence, detection.confidence);
         });
-        
+
         const avgConfidence = detection_count > 0 ? confidenceSum / detection_count : 0;
-        
+
         this.realtimeResult.innerHTML = `
             <div class="detection-info">
                 <div class="info-card">
@@ -678,42 +678,42 @@ class HumanDetectionApp {
         const canvas = this.canvasOverlay;
         const ctx = canvas.getContext('2d');
         const video = this.videoElement;
-        
+
         // 清空画布
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
+
         // 计算缩放比例
         const scaleX = canvas.width / video.videoWidth;
         const scaleY = canvas.height / video.videoHeight;
-        
+
         detections.forEach((detection, index) => {
             const [x1, y1, x2, y2] = detection.bbox;
             const confidence = detection.hairnet_confidence;
             const hasHairnet = detection.has_hairnet;
-            
+
             // 缩放坐标
             const scaledX1 = x1 * scaleX;
             const scaledY1 = y1 * scaleY;
             const scaledX2 = x2 * scaleX;
             const scaledY2 = y2 * scaleY;
-            
+
             // 根据发网佩戴情况设置颜色
             const color = hasHairnet ? '#00ff00' : '#ff0000';
-            
+
             // 绘制检测框
             ctx.strokeStyle = color;
             ctx.lineWidth = 3;
             ctx.strokeRect(scaledX1, scaledY1, scaledX2 - scaledX1, scaledY2 - scaledY1);
-            
+
             // 绘制标签背景
             const status = hasHairnet ? '✅' : '❌';
             const label = `${status} ${(confidence * 100).toFixed(1)}%`;
             ctx.font = '16px Arial';
             const textWidth = ctx.measureText(label).width;
-            
+
             ctx.fillStyle = color;
             ctx.fillRect(scaledX1, scaledY1 - 25, textWidth + 10, 25);
-            
+
             // 绘制标签文字
             ctx.fillStyle = '#fff';
             ctx.fillText(label, scaledX1 + 5, scaledY1 - 5);
@@ -725,37 +725,37 @@ class HumanDetectionApp {
         const canvas = this.canvasOverlay;
         const ctx = canvas.getContext('2d');
         const video = this.videoElement;
-        
+
         // 清空画布
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
+
         // 计算缩放比例
         const scaleX = canvas.width / video.videoWidth;
         const scaleY = canvas.height / video.videoHeight;
-        
+
         detections.forEach((detection, index) => {
             const [x1, y1, x2, y2] = detection.bbox;
             const confidence = detection.confidence;
-            
+
             // 缩放坐标
             const scaledX1 = x1 * scaleX;
             const scaledY1 = y1 * scaleY;
             const scaledX2 = x2 * scaleX;
             const scaledY2 = y2 * scaleY;
-            
+
             // 绘制检测框
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 3;
             ctx.strokeRect(scaledX1, scaledY1, scaledX2 - scaledX1, scaledY2 - scaledY1);
-            
+
             // 绘制标签背景
             const label = `Person ${(confidence * 100).toFixed(1)}%`;
             ctx.font = '16px Arial';
             const textWidth = ctx.measureText(label).width;
-            
+
             ctx.fillStyle = '#00ff00';
             ctx.fillRect(scaledX1, scaledY1 - 25, textWidth + 10, 25);
-            
+
             // 绘制标签文字
             ctx.fillStyle = '#000';
             ctx.fillText(label, scaledX1 + 5, scaledY1 - 5);
@@ -775,14 +775,14 @@ class HumanDetectionApp {
         if (!annotatedContainer) {
             annotatedContainer = document.createElement('div');
             annotatedContainer.className = 'annotated-image-container';
-            
+
             // 插入到结果容器的开头
             const resultContainer = this.uploadResult.querySelector('.result-container');
             if (resultContainer) {
                 resultContainer.insertBefore(annotatedContainer, resultContainer.firstChild.nextSibling);
             }
         }
-        
+
         annotatedContainer.innerHTML = `
             <h4>🎯 标注结果图片</h4>
             <img src="${imageData}" class="result-image" alt="标注结果图片" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">

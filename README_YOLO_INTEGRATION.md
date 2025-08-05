@@ -97,7 +97,7 @@ visualization = result.get('visualization')
 wearing_hairnet = result.get('wearing_hairnet', False)
 confidence = result.get('confidence', 0.0)
 detections = result.get('detections', [])
-    
+
 ```
 
 ## 在系统中使用

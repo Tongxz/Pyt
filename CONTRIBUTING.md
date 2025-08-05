@@ -173,17 +173,17 @@ python scripts/cleanup_tests.py
 # 好的示例
 class PersonDetector:
     """人体检测器类。
-    
+
     用于检测图像或视频中的人体目标。
-    
+
     Attributes:
         model_path: 模型文件路径
         confidence_threshold: 置信度阈值
     """
-    
+
     def __init__(self, model_path: str, confidence_threshold: float = 0.5):
         """初始化检测器。
-        
+
         Args:
             model_path: 模型文件路径
             confidence_threshold: 置信度阈值，默认0.5
@@ -191,22 +191,22 @@ class PersonDetector:
         self.model_path = model_path
         self.confidence_threshold = confidence_threshold
         self._model = None
-    
+
     def detect(self, image: np.ndarray) -> List[Detection]:
         """检测图像中的人体。
-        
+
         Args:
             image: 输入图像，BGR格式
-            
+
         Returns:
             检测结果列表
-            
+
         Raises:
             ValueError: 当图像格式不正确时
         """
         if image is None or len(image.shape) != 3:
             raise ValueError("Invalid image format")
-            
+
         # 检测逻辑
         return self._process_image(image)
 ```
@@ -308,32 +308,32 @@ from src.core.detector import PersonDetector
 
 class TestPersonDetector:
     """人体检测器测试类。"""
-    
+
     @pytest.fixture
     def detector(self):
         """创建检测器实例。"""
         return PersonDetector("models/yolov8n.pt")
-    
+
     @pytest.fixture
     def sample_image(self):
         """加载测试图像。"""
         return cv2.imread("tests/fixtures/images/person.jpg")
-    
+
     def test_detect_single_person(self, detector, sample_image):
         """测试单人检测。"""
         results = detector.detect(sample_image)
-        
+
         assert len(results) == 1
         assert results[0].confidence > 0.5
         assert results[0].class_name == "person"
-    
+
     def test_detect_empty_image(self, detector):
         """测试空图像处理。"""
         empty_image = np.zeros((100, 100, 3), dtype=np.uint8)
         results = detector.detect(empty_image)
-        
+
         assert len(results) == 0
-    
+
     def test_invalid_image_raises_error(self, detector):
         """测试无效图像抛出异常。"""
         with pytest.raises(ValueError):
