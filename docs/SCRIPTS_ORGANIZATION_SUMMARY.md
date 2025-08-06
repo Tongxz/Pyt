@@ -69,7 +69,7 @@
    ```bash
    # macOS/Linux
    ./development/setup_dev_env.sh
-   
+
    # Windows
    deployment\deploy_win.bat
    ```
@@ -83,7 +83,7 @@
    ```bash
    # macOS/Linux
    ./training/start_training.sh
-   
+
    # Windows
    .\training\start_training.ps1
    ```
