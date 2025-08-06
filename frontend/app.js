@@ -24,6 +24,8 @@ class HumanDetectionApp {
         this.uploadText = document.getElementById('uploadText');
         this.uploadFormats = document.getElementById('uploadFormats');
         this.fileTypeRadios = document.querySelectorAll('input[name="fileType"]');
+        this.recordOptions = document.getElementById('recordOptions');
+        this.recordProcessCheckbox = document.getElementById('recordProcess');
 
         // 实时检测相关元素
         this.videoElement = document.getElementById('videoElement');
@@ -151,10 +153,12 @@ class HumanDetectionApp {
             this.uploadText.textContent = '点击或拖拽图片到此处';
             this.uploadFormats.textContent = '支持 JPG、PNG、GIF 格式';
             this.fileInput.accept = 'image/*';
+            this.recordOptions.style.display = 'none';
         } else if (this.currentFileType === 'video') {
             this.uploadText.textContent = '点击或拖拽视频到此处';
             this.uploadFormats.textContent = '支持 MP4、AVI、MOV 格式';
             this.fileInput.accept = 'video/*';
+            this.recordOptions.style.display = 'block';
         }
     }
 
@@ -226,6 +230,15 @@ class HumanDetectionApp {
         try {
             const formData = new FormData();
             formData.append('file', this.selectedFile);
+            
+            // 如果是视频检测，添加录制参数
+            if (this.currentFileType === 'video') {
+                const recordChecked = this.recordProcessCheckbox.checked;
+                console.log('录制选项状态:', recordChecked);
+                const recordValue = recordChecked ? 'true' : 'false';
+                formData.append('record_process', recordValue);
+                console.log('已添加录制参数:', recordValue);
+            }
 
             // 根据文件类型选择不同的API端点
             const endpoint = this.currentFileType === 'image'
@@ -289,6 +302,24 @@ class HumanDetectionApp {
                 </div>
             `;
         }
+        
+        // 视频下载按钮
+        let videoDownloadHtml = '';
+        if (this.currentFileType === 'video' && result.output_video) {
+            videoDownloadHtml = `
+                <div class="video-download-container">
+                    <div class="download-header">
+                        <h4>📹 录制的检测视频</h4>
+                        <div class="download-info">
+                            <span>文件大小: ${(result.output_video.size_bytes / 1024 / 1024).toFixed(2)} MB</span>
+                        </div>
+                    </div>
+                    <button class="btn download-btn" onclick="window.app.downloadProcessedVideo('${result.output_video.filename}')">
+                        💾 下载带标注的视频
+                    </button>
+                </div>
+            `;
+        }
 
         // 显示带标注的结果图片
         let annotatedImageHtml = '';
@@ -328,6 +359,7 @@ class HumanDetectionApp {
             <div class="result-container">
                 <h3>🔍 ${fileType}发网检测结果</h3>
                 ${annotatedImageHtml}
+                ${videoDownloadHtml}
                 <div class="detection-info">
                     <div class="info-card">
                         <div class="info-value">${totalPersons}</div>
@@ -609,6 +641,29 @@ class HumanDetectionApp {
                 }
             }, 300);
         }, 3000);
+    }
+
+    // 下载处理后的视频
+    downloadProcessedVideo(filename) {
+        try {
+            // 创建下载链接
+            const downloadUrl = `${this.apiBaseUrl}/api/v1/download/video/${encodeURIComponent(filename)}`;
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = filename;
+            link.target = '_blank';
+
+            // 触发下载
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // 显示成功提示
+            this.showNotification('📥 视频下载已开始', 'success');
+        } catch (error) {
+            console.error('下载视频失败:', error);
+            this.showNotification('❌ 下载失败，请重试', 'error');
+        }
     }
 
     // 处理发网检测实时结果

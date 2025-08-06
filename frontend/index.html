@@ -575,7 +575,88 @@
             display: flex;
             gap: 1rem;
             justify-content: center;
+            margin: 1.5rem 0;
+        }
+        
+        .record-options {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: linear-gradient(45deg, #f8f9ff, #e8ecff);
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .record-checkbox {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #333;
+        }
+        
+        .record-checkbox input[type="checkbox"] {
+            margin-right: 0.8rem;
+            transform: scale(1.2);
+            accent-color: #667eea;
+        }
+        
+        .record-label {
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .record-checkbox:hover .record-label {
+            color: #667eea;
+        }
+        
+        .video-download-container {
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            color: white;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .download-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .download-header h4 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .download-info {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .download-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            width: 100%;
+        }
+        
+        .download-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
         }
 
         @media (max-width: 768px) {
@@ -628,6 +709,15 @@
                 <button class="btn" id="uploadBtn">选择文件</button>
                 <button class="btn" id="detectBtn" disabled>开始检测</button>
             </div>
+            
+            <!-- 视频录制选项 -->
+            <div class="record-options" id="recordOptions" style="display: none;">
+                <label class="record-checkbox">
+                    <input type="checkbox" id="recordProcess">
+                    <span class="checkmark"></span>
+                    <span class="record-label">📹 录制检测过程（生成带标注的视频）</span>
+                </label>
+            </div>
 
             <div id="uploadStatus"></div>
             <div id="uploadResult"></div>
@@ -671,6 +761,6 @@
         </div>
     </div>
 
-    <script src="/app.js"></script>
+    <script src="/frontend/app.js"></script>
 </body>
 </html>

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>区域配置 - 发网检测系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: flex;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .canvas-area {
+            flex: 1;
+            padding: 20px;
+            background: #fff;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .canvas-container {
+            position: relative;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f8f9fa;
+        }
+
+        #regionCanvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        .canvas-controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .region-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .region-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+
+        .region-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .region-item.active {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .region-item h4 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .region-item p {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .region-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .region-actions .btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            margin: 0;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active {
+            background: #28a745;
+        }
+
+        .status-inactive {
+            background: #dc3545;
+        }
+
+        .rule-config {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .rule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .rule-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: #28a745;
+        }
+
+        .notification.error {
+            background: #dc3545;
+        }
+
+        .notification.warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+
+            .canvas-controls {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 区域配置管理</h1>
+            <p>绘制监控区域，配置检测规则，实现智能化区域管理</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <!-- 图像上传区域 -->
+                <div class="section">
+                    <h3>📷 背景图像</h3>
+                    <div class="form-group">
+                        <label for="backgroundImage">选择背景图像</label>
+                        <input type="file" id="backgroundImage" accept="image/*">
+                    </div>
+                    <button class="btn btn-secondary" onclick="clearBackground()">清除背景</button>
+                </div>
+
+                <!-- 区域配置 -->
+                <div class="section">
+                    <h3>🏗️ 新建区域</h3>
+                    <div class="form-group">
+                        <label for="regionName">区域名称</label>
+                        <input type="text" id="regionName" placeholder="例如：入口区域">
+                    </div>
+                    <div class="form-group">
+                        <label for="regionType">区域类型</label>
+                        <select id="regionType">
+                            <option value="entrance">入口区域</option>
+                            <option value="work_area">工作区域</option>
+                            <option value="restricted">限制区域</option>
+                            <option value="monitoring">监控区域</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="regionDescription">区域描述</label>
+                        <textarea id="regionDescription" rows="3" placeholder="描述区域的用途和特点"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>检测规则</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="requireHairnet" checked>
+                                <label for="requireHairnet">必须佩戴发网</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="limitOccupancy">
+                                <label for="limitOccupancy">人数限制</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="timeRestriction">
+                                <label for="timeRestriction">时间限制</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group" id="occupancyConfig" style="display: none;">
+                        <label for="maxOccupancy">最大人数</label>
+                        <input type="number" id="maxOccupancy" min="1" value="5">
+                    </div>
+                    <button class="btn btn-primary" onclick="startDrawing()">开始绘制区域</button>
+                </div>
+
+                <!-- 区域列表 -->
+                <div class="section">
+                    <h3>📋 区域列表</h3>
+                    <div id="regionList" class="region-list">
+                        <!-- 区域项目将在这里动态生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="canvas-area">
+                <div class="canvas-controls">
+                    <button class="btn btn-primary" onclick="startDrawing()">🖊️ 绘制区域</button>
+                    <button class="btn btn-secondary" onclick="clearCanvas()">🗑️ 清空画布</button>
+                    <button class="btn btn-success" onclick="saveRegions()">💾 保存配置</button>
+                    <button class="btn btn-secondary" onclick="loadRegions()">📂 加载配置</button>
+                    <button class="btn btn-secondary" onclick="exportConfig()">📤 导出配置</button>
+                </div>
+
+                <div class="canvas-container">
+                    <canvas id="regionCanvas" width="800" height="600"></canvas>
+                </div>
+
+                <div class="section">
+                    <h3>📊 操作说明</h3>
+                    <ul style="color: #666; line-height: 1.6;">
+                        <li><strong>绘制区域：</strong>点击"开始绘制区域"按钮，然后在画布上点击创建多边形顶点</li>
+                        <li><strong>完成绘制：</strong>双击或右键完成当前区域的绘制</li>
+                        <li><strong>编辑区域：</strong>点击区域列表中的"编辑"按钮可修改区域属性</li>
+                        <li><strong>删除区域：</strong>点击区域列表中的"删除"按钮可移除区域</li>
+                        <li><strong>保存配置：</strong>完成配置后记得保存到服务器</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知组件 -->
+    <div id="notification" class="notification"></div>
+
+    <script src="region_config.js"></script>
+</body>
+</html>

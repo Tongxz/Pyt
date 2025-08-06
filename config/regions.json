@@ -1,0 +1,43 @@
+{
+  "regions": [
+    {
+      "id": "region_1754469805725",
+      "name": "测试",
+      "type": "entrance",
+      "description": "",
+      "points": [
+        {
+          "x": 339,
+          "y": 358.5
+        },
+        {
+          "x": 345,
+          "y": 147.5
+        },
+        {
+          "x": 549,
+          "y": 147.5
+        },
+        {
+          "x": 549,
+          "y": 445.5
+        },
+        {
+          "x": 337,
+          "y": 438.5
+        }
+      ],
+      "rules": {
+        "require_hairnet": true
+      },
+      "isActive": true,
+      "createdAt": "2025-08-06T08:43:25.725Z",
+      "color": "#28a745"
+    }
+  ],
+  "canvas_size": {
+    "width": 800,
+    "height": 450
+  },
+  "saved_at": "2025-08-06T16:43:28.234126"
+}

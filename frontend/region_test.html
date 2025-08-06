@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>区域检测测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid #e9ecef;
+        }
+
+        .test-section h3 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input[type="file"]:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 8px;
+            margin: 15px 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .detection-result {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .violation-result {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .region-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 1px solid #c3e6cb;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .json-display {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 区域检测测试</h1>
+            <p>上传图像测试区域检测功能，查看人员在各区域的检测结果和违规情况</p>
+        </div>
+
+        <div class="main-content">
+            <!-- 图像上传测试 -->
+            <div class="test-section">
+                <h3>📷 图像上传测试</h3>
+                <div class="form-group">
+                    <label for="testImage">选择测试图像</label>
+                    <input type="file" id="testImage" accept="image/*">
+                </div>
+                <button class="btn btn-primary" onclick="testRegionDetection()">开始区域检测测试</button>
+                <button class="btn btn-secondary" onclick="loadRegions()">加载区域配置</button>
+                <div id="imagePreview"></div>
+            </div>
+
+            <!-- 区域配置信息 -->
+            <div class="test-section">
+                <h3>🏗️ 当前区域配置</h3>
+                <div id="regionInfo">点击"加载区域配置"查看当前配置的区域</div>
+            </div>
+
+            <!-- 检测结果 -->
+            <div class="test-section">
+                <h3>📊 检测结果</h3>
+                <div id="detectionResults">上传图像并开始检测后，结果将显示在这里</div>
+            </div>
+
+            <!-- 发网检测结果 -->
+            <div class="test-section">
+                <h3>🧢 发网检测结果</h3>
+                <div id="hairnetResults">发网检测结果将显示在这里</div>
+            </div>
+
+            <!-- 违规检测结果 -->
+            <div class="test-section">
+                <h3>⚠️ 违规检测结果</h3>
+                <div id="violationResults">违规检测结果将显示在这里</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRegions = [];
+        let currentImage = null;
+
+        // 加载区域配置
+        async function loadRegions() {
+            try {
+                const response = await fetch('/api/regions');
+                const data = await response.json();
+                
+                currentRegions = data.regions || [];
+                
+                const regionInfo = document.getElementById('regionInfo');
+                if (currentRegions.length === 0) {
+                    regionInfo.innerHTML = '<div class="error">❌ 未找到任何区域配置，请先在区域配置页面创建区域</div>';
+                    return;
+                }
+                
+                let html = '<div class="success">✅ 成功加载区域配置</div>';
+                html += '<div class="stats-grid">';
+                html += `<div class="stat-card"><div class="stat-value">${currentRegions.length}</div><div class="stat-label">总区域数</div></div>`;
+                
+                const activeRegions = currentRegions.filter(r => r.is_active);
+                html += `<div class="stat-card"><div class="stat-value">${activeRegions.length}</div><div class="stat-label">激活区域</div></div>`;
+                
+                const regionTypes = [...new Set(currentRegions.map(r => r.type))];
+                html += `<div class="stat-card"><div class="stat-value">${regionTypes.length}</div><div class="stat-label">区域类型</div></div>`;
+                html += '</div>';
+                
+                html += '<h4>区域详情：</h4>';
+                currentRegions.forEach(region => {
+                    html += `
+                        <div class="region-info">
+                            <strong>${region.name}</strong> (${region.type})
+                            <br>状态: ${region.is_active ? '✅ 激活' : '❌ 未激活'}
+                            <br>点数: ${region.points.length}
+                            <br>描述: ${region.description || '无'}
+                        </div>
+                    `;
+                });
+                
+                regionInfo.innerHTML = html;
+            } catch (error) {
+                console.error('加载区域配置失败:', error);
+                document.getElementById('regionInfo').innerHTML = 
+                    '<div class="error">❌ 加载区域配置失败: ' + error.message + '</div>';
+            }
+        }
+
+        // 处理图像选择
+        document.getElementById('testImage').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                currentImage = file;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('imagePreview');
+                    preview.innerHTML = `<img src="${e.target.result}" class="image-preview" alt="测试图像">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 测试区域检测
+        async function testRegionDetection() {
+            if (!currentImage) {
+                alert('请先选择一张测试图像');
+                return;
+            }
+
+            if (currentRegions.length === 0) {
+                alert('请先加载区域配置');
+                return;
+            }
+
+            const detectionResults = document.getElementById('detectionResults');
+            const violationResults = document.getElementById('violationResults');
+            
+            detectionResults.innerHTML = '<div class="loading">🔄 正在进行人体检测...</div>';
+            violationResults.innerHTML = '<div class="loading">🔄 正在分析区域违规...</div>';
+
+            try {
+                // 1. 先进行人体检测
+                const formData = new FormData();
+                formData.append('file', currentImage);
+                
+                const detectResponse = await fetch('/api/v1/detect/region', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!detectResponse.ok) {
+                    throw new Error(`检测失败: ${detectResponse.status}`);
+                }
+                
+                const detectData = await detectResponse.json();
+                
+                // 显示检测结果（包含发网检测和区域分析）
+                displayDetectionResults(detectData);
+                
+                // 显示区域分析结果
+                displayRegionAnalysis(detectData);
+                
+            } catch (error) {
+                console.error('区域检测测试失败:', error);
+                detectionResults.innerHTML = '<div class="error">❌ 检测失败: ' + error.message + '</div>';
+                violationResults.innerHTML = '<div class="error">❌ 区域分析失败</div>';
+            }
+        }
+
+        // 显示检测结果
+        function displayDetectionResults(data) {
+            const container = document.getElementById('detectionResults');
+            
+            let html = '<div class="success">✅ 人体检测完成</div>';
+            
+            // 统计信息
+            html += '<div class="stats-grid">';
+            html += `<div class="stat-card"><div class="stat-value">${data.detection_count || 0}</div><div class="stat-label">检测到的人数</div></div>`;
+            html += `<div class="stat-card"><div class="stat-value">${(data.processing_time || 0).toFixed(3)}s</div><div class="stat-label">处理时间</div></div>`;
+            html += '</div>';
+            
+            // 检测详情
+            if (data.detections && data.detections.length > 0) {
+                html += '<h4>检测详情：</h4>';
+                data.detections.forEach((detection, index) => {
+                    html += `
+                        <div class="detection-result">
+                            <strong>人员 ${index + 1}</strong>
+                            <br>位置: [${detection.bbox.map(v => Math.round(v)).join(', ')}]
+                            <br>置信度: ${(detection.confidence * 100).toFixed(1)}%
+                            <br>类别: ${detection.class_name || 'person'}
+                        </div>
+                    `;
+                });
+            } else {
+                html += '<div class="region-info">未检测到任何人员</div>';
+            }
+            
+            // 显示标注图像
+            if (data.annotated_image) {
+                html += '<h4>检测结果图像：</h4>';
+                html += `<img src="data:image/jpeg;base64,${data.annotated_image}" class="image-preview" alt="检测结果">`;
+            }
+            
+            container.innerHTML = html;
+            
+            // 显示发网检测结果
+            if (data.hairnet_results && data.hairnet_results.length > 0) {
+                const hairnetContainer = document.getElementById('hairnetResults');
+                let hairnetHtml = '<div class="success">✅ 发网检测完成</div>';
+                
+                // 发网统计信息
+                hairnetHtml += '<div class="stats-grid">';
+                hairnetHtml += `<div class="stat-card"><div class="stat-value">${data.persons_with_hairnet || 0}</div><div class="stat-label">戴发网人数</div></div>`;
+                hairnetHtml += `<div class="stat-card"><div class="stat-value">${((data.compliance_rate || 0) * 100).toFixed(1)}%</div><div class="stat-label">合规率</div></div>`;
+                hairnetHtml += `<div class="stat-card"><div class="stat-value">${(data.hairnet_detection_time || 0).toFixed(3)}s</div><div class="stat-label">检测时间</div></div>`;
+                hairnetHtml += '</div>';
+                
+                // 发网检测详情
+                hairnetHtml += '<h4>发网检测详情：</h4>';
+                data.hairnet_results.forEach((result, index) => {
+                    const statusColor = result.has_hairnet ? '#4CAF50' : '#f44336';
+                    const statusText = result.has_hairnet ? '✓ 已佩戴' : '✗ 未佩戴';
+                    const resultClass = result.has_hairnet ? 'detection-result' : 'violation-result';
+                    
+                    hairnetHtml += `
+                        <div class="${resultClass}">
+                            <strong>人员 ${result.person_id}</strong>
+                            <br>发网状态: <span style="color: ${statusColor}">${statusText}</span>
+                            <br>置信度: ${(result.confidence * 100).toFixed(1)}%
+                            ${result.error ? `<br>错误: ${result.error}` : ''}
+                        </div>
+                    `;
+                });
+                
+                hairnetContainer.innerHTML = hairnetHtml;
+            } else {
+                document.getElementById('hairnetResults').innerHTML = '<div class="region-info">未进行发网检测或无检测结果</div>';
+            }
+        }
+
+        // 显示区域分析结果
+        function displayRegionAnalysis(data) {
+            const container = document.getElementById('violationResults');
+            
+            if (data.region_analysis && data.region_analysis.length > 0) {
+                let html = '<div class="success">✅ 区域分析完成</div>';
+                
+                // 区域统计
+                html += '<div class="stats-grid">';
+                html += `<div class="stat-card"><div class="stat-value">${data.region_analysis.length}</div><div class="stat-label">分析区域数</div></div>`;
+                
+                const violatedRegions = data.region_analysis.filter(r => r.violations && r.violations.length > 0);
+                html += `<div class="stat-card"><div class="stat-value">${violatedRegions.length}</div><div class="stat-label">违规区域数</div></div>`;
+                html += `<div class="stat-card"><div class="stat-value">${(data.region_analysis_time || 0).toFixed(3)}s</div><div class="stat-label">分析时间</div></div>`;
+                html += '</div>';
+                
+                // 区域详情
+                html += '<h4>区域分析详情：</h4>';
+                data.region_analysis.forEach(region => {
+                    const hasViolations = region.violations && region.violations.length > 0;
+                    const resultClass = hasViolations ? 'violation-result' : 'detection-result';
+                    
+                    html += `
+                        <div class="${resultClass}">
+                            <strong>${region.name}</strong> (${region.type})
+                            <br>占用人数: ${region.person_count}
+                            ${hasViolations ? `<br>违规: ${region.violations.join(', ')}` : '<br>状态: 正常'}
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<div class="region-info">未进行区域分析或无分析结果</div>';
+            }
+        }
+        
+        // 分析区域违规（保留原函数用于兼容）
+        function analyzeRegionViolations(detections) {
+            const container = document.getElementById('violationResults');
+            
+            if (!detections || detections.length === 0) {
+                container.innerHTML = '<div class="region-info">无人员检测结果，无法进行区域分析</div>';
+                return;
+            }
+            
+            let html = '<div class="success">✅ 区域分析完成</div>';
+            
+            const regionOccupancy = {};
+            const violations = [];
+            
+            // 初始化区域占用统计
+            currentRegions.forEach(region => {
+                regionOccupancy[region.id] = {
+                    region: region,
+                    persons: [],
+                    count: 0
+                };
+            });
+            
+            // 检查每个检测到的人员
+            detections.forEach((detection, personIndex) => {
+                const personCenter = {
+                    x: (detection.bbox[0] + detection.bbox[2]) / 2,
+                    y: (detection.bbox[1] + detection.bbox[3]) / 2
+                };
+                
+                // 检查人员是否在各个区域内
+                currentRegions.forEach(region => {
+                    if (region.is_active && isPointInRegion(personCenter, region.points)) {
+                        regionOccupancy[region.id].persons.push({
+                            index: personIndex + 1,
+                            center: personCenter,
+                            detection: detection
+                        });
+                        regionOccupancy[region.id].count++;
+                        
+                        // 检查区域规则违规
+                        if (region.rules) {
+                            checkRegionRules(region, detection, personIndex + 1, violations);
+                        }
+                    }
+                });
+            });
+            
+            // 显示区域占用情况
+            html += '<h4>区域占用情况：</h4>';
+            Object.values(regionOccupancy).forEach(occupancy => {
+                const region = occupancy.region;
+                html += `
+                    <div class="region-info">
+                        <strong>${region.name}</strong> (${region.type})
+                        <br>当前人数: ${occupancy.count}
+                        <br>状态: ${occupancy.count > 0 ? '🟢 有人员' : '⚪ 无人员'}
+                `;
+                
+                if (occupancy.persons.length > 0) {
+                    html += '<br>人员详情: ';
+                    occupancy.persons.forEach(person => {
+                        html += `人员${person.index} `;
+                    });
+                }
+                
+                html += '</div>';
+            });
+            
+            // 显示违规情况
+            html += '<h4>违规检测：</h4>';
+            if (violations.length > 0) {
+                violations.forEach(violation => {
+                    html += `
+                        <div class="violation-result">
+                            <strong>⚠️ ${violation.type}</strong>
+                            <br>区域: ${violation.regionName}
+                            <br>人员: ${violation.person}
+                            <br>详情: ${violation.details}
+                        </div>
+                    `;
+                });
+            } else {
+                html += '<div class="success">✅ 未发现违规行为</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // 检查点是否在区域内（射线法）
+        function isPointInRegion(point, regionPoints) {
+            let inside = false;
+            const x = point.x, y = point.y;
+            
+            for (let i = 0, j = regionPoints.length - 1; i < regionPoints.length; j = i++) {
+                const xi = regionPoints[i].x, yi = regionPoints[i].y;
+                const xj = regionPoints[j].x, yj = regionPoints[j].y;
+                
+                if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+            
+            return inside;
+        }
+
+        // 检查区域规则
+        function checkRegionRules(region, detection, personIndex, violations) {
+            const rules = region.rules;
+            
+            // 检查最大容纳人数
+            if (rules.max_occupancy > 0) {
+                // 这里简化处理，实际应该统计当前区域总人数
+                // 在实际应用中，这个检查应该在服务器端进行
+            }
+            
+            // 检查禁止行为（示例）
+            if (rules.forbidden_behaviors && rules.forbidden_behaviors.length > 0) {
+                // 这里可以添加行为检测逻辑
+                // 目前只是示例
+            }
+            
+            // 检查必需行为（示例）
+            if (rules.required_behaviors && rules.required_behaviors.length > 0) {
+                // 这里可以添加必需行为检测逻辑
+                violations.push({
+                    type: '缺少必需行为',
+                    regionName: region.name,
+                    person: `人员${personIndex}`,
+                    details: `需要执行: ${rules.required_behaviors.join(', ')}`
+                });
+            }
+        }
+
+        // 页面加载时自动加载区域配置
+        window.addEventListener('load', function() {
+            loadRegions();
+        });
+    </script>
+</body>
+</html>
