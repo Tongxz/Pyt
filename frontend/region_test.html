@@ -290,26 +290,26 @@
             try {
                 const response = await fetch('/api/regions');
                 const data = await response.json();
-                
+
                 currentRegions = data.regions || [];
-                
+
                 const regionInfo = document.getElementById('regionInfo');
                 if (currentRegions.length === 0) {
                     regionInfo.innerHTML = '<div class="error">❌ 未找到任何区域配置，请先在区域配置页面创建区域</div>';
                     return;
                 }
-                
+
                 let html = '<div class="success">✅ 成功加载区域配置</div>';
                 html += '<div class="stats-grid">';
                 html += `<div class="stat-card"><div class="stat-value">${currentRegions.length}</div><div class="stat-label">总区域数</div></div>`;
-                
+
                 const activeRegions = currentRegions.filter(r => r.is_active);
                 html += `<div class="stat-card"><div class="stat-value">${activeRegions.length}</div><div class="stat-label">激活区域</div></div>`;
-                
+
                 const regionTypes = [...new Set(currentRegions.map(r => r.type))];
                 html += `<div class="stat-card"><div class="stat-value">${regionTypes.length}</div><div class="stat-label">区域类型</div></div>`;
                 html += '</div>';
-                
+
                 html += '<h4>区域详情：</h4>';
                 currentRegions.forEach(region => {
                     html += `
@@ -321,11 +321,11 @@
                         </div>
                     `;
                 });
-                
+
                 regionInfo.innerHTML = html;
             } catch (error) {
                 console.error('加载区域配置失败:', error);
-                document.getElementById('regionInfo').innerHTML = 
+                document.getElementById('regionInfo').innerHTML =
                     '<div class="error">❌ 加载区域配置失败: ' + error.message + '</div>';
             }
         }
@@ -358,7 +358,7 @@
 
             const detectionResults = document.getElementById('detectionResults');
             const violationResults = document.getElementById('violationResults');
-            
+
             detectionResults.innerHTML = '<div class="loading">🔄 正在进行人体检测...</div>';
             violationResults.innerHTML = '<div class="loading">🔄 正在分析区域违规...</div>';
 
@@ -366,24 +366,24 @@
                 // 1. 先进行人体检测
                 const formData = new FormData();
                 formData.append('file', currentImage);
-                
+
                 const detectResponse = await fetch('/api/v1/detect/region', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 if (!detectResponse.ok) {
                     throw new Error(`检测失败: ${detectResponse.status}`);
                 }
-                
+
                 const detectData = await detectResponse.json();
-                
+
                 // 显示检测结果（包含发网检测和区域分析）
                 displayDetectionResults(detectData);
-                
+
                 // 显示区域分析结果
                 displayRegionAnalysis(detectData);
-                
+
             } catch (error) {
                 console.error('区域检测测试失败:', error);
                 detectionResults.innerHTML = '<div class="error">❌ 检测失败: ' + error.message + '</div>';
@@ -394,15 +394,15 @@
         // 显示检测结果
         function displayDetectionResults(data) {
             const container = document.getElementById('detectionResults');
-            
+
             let html = '<div class="success">✅ 人体检测完成</div>';
-            
+
             // 统计信息
             html += '<div class="stats-grid">';
             html += `<div class="stat-card"><div class="stat-value">${data.detection_count || 0}</div><div class="stat-label">检测到的人数</div></div>`;
             html += `<div class="stat-card"><div class="stat-value">${(data.processing_time || 0).toFixed(3)}s</div><div class="stat-label">处理时间</div></div>`;
             html += '</div>';
-            
+
             // 检测详情
             if (data.detections && data.detections.length > 0) {
                 html += '<h4>检测详情：</h4>';
@@ -419,34 +419,34 @@
             } else {
                 html += '<div class="region-info">未检测到任何人员</div>';
             }
-            
+
             // 显示标注图像
             if (data.annotated_image) {
                 html += '<h4>检测结果图像：</h4>';
                 html += `<img src="data:image/jpeg;base64,${data.annotated_image}" class="image-preview" alt="检测结果">`;
             }
-            
+
             container.innerHTML = html;
-            
+
             // 显示发网检测结果
             if (data.hairnet_results && data.hairnet_results.length > 0) {
                 const hairnetContainer = document.getElementById('hairnetResults');
                 let hairnetHtml = '<div class="success">✅ 发网检测完成</div>';
-                
+
                 // 发网统计信息
                 hairnetHtml += '<div class="stats-grid">';
                 hairnetHtml += `<div class="stat-card"><div class="stat-value">${data.persons_with_hairnet || 0}</div><div class="stat-label">戴发网人数</div></div>`;
                 hairnetHtml += `<div class="stat-card"><div class="stat-value">${((data.compliance_rate || 0) * 100).toFixed(1)}%</div><div class="stat-label">合规率</div></div>`;
                 hairnetHtml += `<div class="stat-card"><div class="stat-value">${(data.hairnet_detection_time || 0).toFixed(3)}s</div><div class="stat-label">检测时间</div></div>`;
                 hairnetHtml += '</div>';
-                
+
                 // 发网检测详情
                 hairnetHtml += '<h4>发网检测详情：</h4>';
                 data.hairnet_results.forEach((result, index) => {
                     const statusColor = result.has_hairnet ? '#4CAF50' : '#f44336';
                     const statusText = result.has_hairnet ? '✓ 已佩戴' : '✗ 未佩戴';
                     const resultClass = result.has_hairnet ? 'detection-result' : 'violation-result';
-                    
+
                     hairnetHtml += `
                         <div class="${resultClass}">
                             <strong>人员 ${result.person_id}</strong>
@@ -456,7 +456,7 @@
                         </div>
                     `;
                 });
-                
+
                 hairnetContainer.innerHTML = hairnetHtml;
             } else {
                 document.getElementById('hairnetResults').innerHTML = '<div class="region-info">未进行发网检测或无检测结果</div>';
@@ -466,25 +466,25 @@
         // 显示区域分析结果
         function displayRegionAnalysis(data) {
             const container = document.getElementById('violationResults');
-            
+
             if (data.region_analysis && data.region_analysis.length > 0) {
                 let html = '<div class="success">✅ 区域分析完成</div>';
-                
+
                 // 区域统计
                 html += '<div class="stats-grid">';
                 html += `<div class="stat-card"><div class="stat-value">${data.region_analysis.length}</div><div class="stat-label">分析区域数</div></div>`;
-                
+
                 const violatedRegions = data.region_analysis.filter(r => r.violations && r.violations.length > 0);
                 html += `<div class="stat-card"><div class="stat-value">${violatedRegions.length}</div><div class="stat-label">违规区域数</div></div>`;
                 html += `<div class="stat-card"><div class="stat-value">${(data.region_analysis_time || 0).toFixed(3)}s</div><div class="stat-label">分析时间</div></div>`;
                 html += '</div>';
-                
+
                 // 区域详情
                 html += '<h4>区域分析详情：</h4>';
                 data.region_analysis.forEach(region => {
                     const hasViolations = region.violations && region.violations.length > 0;
                     const resultClass = hasViolations ? 'violation-result' : 'detection-result';
-                    
+
                     html += `
                         <div class="${resultClass}">
                             <strong>${region.name}</strong> (${region.type})
@@ -493,27 +493,27 @@
                         </div>
                     `;
                 });
-                
+
                 container.innerHTML = html;
             } else {
                 container.innerHTML = '<div class="region-info">未进行区域分析或无分析结果</div>';
             }
         }
-        
+
         // 分析区域违规（保留原函数用于兼容）
         function analyzeRegionViolations(detections) {
             const container = document.getElementById('violationResults');
-            
+
             if (!detections || detections.length === 0) {
                 container.innerHTML = '<div class="region-info">无人员检测结果，无法进行区域分析</div>';
                 return;
             }
-            
+
             let html = '<div class="success">✅ 区域分析完成</div>';
-            
+
             const regionOccupancy = {};
             const violations = [];
-            
+
             // 初始化区域占用统计
             currentRegions.forEach(region => {
                 regionOccupancy[region.id] = {
@@ -522,14 +522,14 @@
                     count: 0
                 };
             });
-            
+
             // 检查每个检测到的人员
             detections.forEach((detection, personIndex) => {
                 const personCenter = {
                     x: (detection.bbox[0] + detection.bbox[2]) / 2,
                     y: (detection.bbox[1] + detection.bbox[3]) / 2
                 };
-                
+
                 // 检查人员是否在各个区域内
                 currentRegions.forEach(region => {
                     if (region.is_active && isPointInRegion(personCenter, region.points)) {
@@ -539,7 +539,7 @@
                             detection: detection
                         });
                         regionOccupancy[region.id].count++;
-                        
+
                         // 检查区域规则违规
                         if (region.rules) {
                             checkRegionRules(region, detection, personIndex + 1, violations);
@@ -547,7 +547,7 @@
                     }
                 });
             });
-            
+
             // 显示区域占用情况
             html += '<h4>区域占用情况：</h4>';
             Object.values(regionOccupancy).forEach(occupancy => {
@@ -558,17 +558,17 @@
                         <br>当前人数: ${occupancy.count}
                         <br>状态: ${occupancy.count > 0 ? '🟢 有人员' : '⚪ 无人员'}
                 `;
-                
+
                 if (occupancy.persons.length > 0) {
                     html += '<br>人员详情: ';
                     occupancy.persons.forEach(person => {
                         html += `人员${person.index} `;
                     });
                 }
-                
+
                 html += '</div>';
             });
-            
+
             // 显示违规情况
             html += '<h4>违规检测：</h4>';
             if (violations.length > 0) {
@@ -585,7 +585,7 @@
             } else {
                 html += '<div class="success">✅ 未发现违规行为</div>';
             }
-            
+
             container.innerHTML = html;
         }
 
@@ -593,35 +593,35 @@
         function isPointInRegion(point, regionPoints) {
             let inside = false;
             const x = point.x, y = point.y;
-            
+
             for (let i = 0, j = regionPoints.length - 1; i < regionPoints.length; j = i++) {
                 const xi = regionPoints[i].x, yi = regionPoints[i].y;
                 const xj = regionPoints[j].x, yj = regionPoints[j].y;
-                
+
                 if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
                     inside = !inside;
                 }
             }
-            
+
             return inside;
         }
 
         // 检查区域规则
         function checkRegionRules(region, detection, personIndex, violations) {
             const rules = region.rules;
-            
+
             // 检查最大容纳人数
             if (rules.max_occupancy > 0) {
                 // 这里简化处理，实际应该统计当前区域总人数
                 // 在实际应用中，这个检查应该在服务器端进行
             }
-            
+
             // 检查禁止行为（示例）
             if (rules.forbidden_behaviors && rules.forbidden_behaviors.length > 0) {
                 // 这里可以添加行为检测逻辑
                 // 目前只是示例
             }
-            
+
             // 检查必需行为（示例）
             if (rules.required_behaviors && rules.required_behaviors.length > 0) {
                 // 这里可以添加必需行为检测逻辑

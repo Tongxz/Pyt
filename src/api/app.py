@@ -173,7 +173,15 @@ try:
     from core.data_manager import DetectionDataManager
     from core.detector import HumanDetector
     from core.region import RegionManager
-    from core.rule_engine import RuleEngine, Rule, RuleType, RulePriority, ViolationSeverity, RuleCondition, Violation
+    from core.rule_engine import (
+        Rule,
+        RuleCondition,
+        RuleEngine,
+        RulePriority,
+        RuleType,
+        Violation,
+        ViolationSeverity,
+    )
 
     logger.info("成功导入核心模块")
 except ImportError as e:
@@ -211,20 +219,23 @@ app.add_middleware(
 # 挂载前端静态文件
 frontend_path = os.path.join(project_root, "frontend")
 if os.path.exists(frontend_path):
-    from fastapi.staticfiles import StaticFiles
     from fastapi import Response
-    
+    from fastapi.staticfiles import StaticFiles
+
     class NoCacheStaticFiles(StaticFiles):
         def file_response(self, *args, **kwargs) -> Response:
             response = super().file_response(*args, **kwargs)
             # 对JavaScript文件添加无缓存头
-            if response.headers.get("content-type", "").startswith("application/javascript") or \
-               response.headers.get("content-type", "").startswith("text/javascript"):
-                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            if response.headers.get("content-type", "").startswith(
+                "application/javascript"
+            ) or response.headers.get("content-type", "").startswith("text/javascript"):
+                response.headers[
+                    "Cache-Control"
+                ] = "no-cache, no-store, must-revalidate"
                 response.headers["Pragma"] = "no-cache"
                 response.headers["Expires"] = "0"
             return response
-    
+
     app.mount("/frontend", NoCacheStaticFiles(directory=frontend_path), name="frontend")
     logger.info(f"静态文件目录已挂载: {frontend_path} 到 /frontend 路径")
 
@@ -291,13 +302,13 @@ def analyze_detections_with_regions(detections):
             "region_occupancy": {},
             "violations": [],
             "total_regions": 0,
-            "active_regions": 0
+            "active_regions": 0,
         }
-    
+
     try:
         region_occupancy = {}
         violations = []
-        
+
         # 初始化区域占用统计
         for region_id, region in region_manager.regions.items():
             region_occupancy[region_id] = {
@@ -307,50 +318,51 @@ def analyze_detections_with_regions(detections):
                 "is_active": region.is_active,
                 "current_occupancy": 0,
                 "persons": [],
-                "max_occupancy": region.rules.get('max_occupancy', -1),
-                "required_behaviors": region.rules.get('required_behaviors', []),
-                "forbidden_behaviors": region.rules.get('forbidden_behaviors', [])
+                "max_occupancy": region.rules.get("max_occupancy", -1),
+                "required_behaviors": region.rules.get("required_behaviors", []),
+                "forbidden_behaviors": region.rules.get("forbidden_behaviors", []),
             }
-        
+
         # 分析每个检测到的人员
         for person_idx, detection in enumerate(detections):
             # 计算人员中心点
-            bbox = detection.get('bbox', [0, 0, 0, 0])
-            person_center = {
-                "x": (bbox[0] + bbox[2]) / 2,
-                "y": (bbox[1] + bbox[3]) / 2
-            }
-            
+            bbox = detection.get("bbox", [0, 0, 0, 0])
+            person_center = {"x": (bbox[0] + bbox[2]) / 2, "y": (bbox[1] + bbox[3]) / 2}
+
             person_info = {
                 "person_id": person_idx + 1,
                 "center": person_center,
                 "bbox": bbox,
-                "confidence": detection.get('confidence', 0.0)
+                "confidence": detection.get("confidence", 0.0),
             }
-            
+
             # 检查人员是否在各个区域内
             for region_id, region in region_manager.regions.items():
                 if not region.is_active:
                     continue
-                    
+
                 # 使用区域管理器的点在区域内检测方法
                 if region.point_in_region((person_center["x"], person_center["y"])):
                     region_occupancy[region_id]["current_occupancy"] += 1
                     region_occupancy[region_id]["persons"].append(person_info)
-                    
+
                     # 检查区域规则违规
-                    region_violations = check_region_violations(region, person_info, region_occupancy[region_id])
+                    region_violations = check_region_violations(
+                        region, person_info, region_occupancy[region_id]
+                    )
                     violations.extend(region_violations)
-        
+
         return {
             "region_occupancy": region_occupancy,
             "violations": violations,
             "total_regions": len(region_manager.regions),
-            "active_regions": len([r for r in region_manager.regions.values() if r.is_active]),
+            "active_regions": len(
+                [r for r in region_manager.regions.values() if r.is_active]
+            ),
             "total_persons_detected": len(detections),
-            "analysis_summary": generate_analysis_summary(region_occupancy, violations)
+            "analysis_summary": generate_analysis_summary(region_occupancy, violations),
         }
-        
+
     except Exception as e:
         logger.error(f"区域分析失败: {e}")
         return {
@@ -358,65 +370,75 @@ def analyze_detections_with_regions(detections):
             "region_occupancy": {},
             "violations": [],
             "total_regions": 0,
-            "active_regions": 0
+            "active_regions": 0,
         }
 
 
 def check_region_violations(region, person_info, region_occupancy):
     """检查区域规则违规"""
     violations = []
-    
+
     try:
         # 检查最大容纳人数
-        max_occupancy = region.rules.get('max_occupancy', -1)
+        max_occupancy = region.rules.get("max_occupancy", -1)
         if max_occupancy > 0 and region_occupancy["current_occupancy"] > max_occupancy:
-            violations.append({
-                "type": "超出最大容纳人数",
-                "severity": "high",
-                "region_id": region.region_id,
-                "region_name": region.name,
-                "person_id": person_info["person_id"],
-                "details": f"当前人数 {region_occupancy['current_occupancy']} 超过最大限制 {max_occupancy}",
-                "timestamp": time.time()
-            })
-        
+            violations.append(
+                {
+                    "type": "超出最大容纳人数",
+                    "severity": "high",
+                    "region_id": region.region_id,
+                    "region_name": region.name,
+                    "person_id": person_info["person_id"],
+                    "details": f"当前人数 {region_occupancy['current_occupancy']} 超过最大限制 {max_occupancy}",
+                    "timestamp": time.time(),
+                }
+            )
+
         # 检查必需行为（示例 - 实际需要行为识别模块）
-        required_behaviors = region.rules.get('required_behaviors', [])
+        required_behaviors = region.rules.get("required_behaviors", [])
         if required_behaviors:
-            violations.append({
-                "type": "缺少必需行为",
-                "severity": "medium",
-                "region_id": region.region_id,
-                "region_name": region.name,
-                "person_id": person_info["person_id"],
-                "details": f"需要执行行为: {', '.join(required_behaviors)}",
-                "timestamp": time.time()
-            })
-        
+            violations.append(
+                {
+                    "type": "缺少必需行为",
+                    "severity": "medium",
+                    "region_id": region.region_id,
+                    "region_name": region.name,
+                    "person_id": person_info["person_id"],
+                    "details": f"需要执行行为: {', '.join(required_behaviors)}",
+                    "timestamp": time.time(),
+                }
+            )
+
         # 检查禁止行为（示例 - 实际需要行为识别模块）
-        forbidden_behaviors = region.rules.get('forbidden_behaviors', [])
+        forbidden_behaviors = region.rules.get("forbidden_behaviors", [])
         if forbidden_behaviors:
             # 这里可以添加具体的行为检测逻辑
             pass
-            
+
     except Exception as e:
         logger.error(f"检查区域违规失败: {e}")
-    
+
     return violations
 
 
 def generate_analysis_summary(region_occupancy, violations):
     """生成分析摘要"""
-    occupied_regions = len([r for r in region_occupancy.values() if r["current_occupancy"] > 0])
+    occupied_regions = len(
+        [r for r in region_occupancy.values() if r["current_occupancy"] > 0]
+    )
     total_violations = len(violations)
-    high_severity_violations = len([v for v in violations if v.get("severity") == "high"])
-    
+    high_severity_violations = len(
+        [v for v in violations if v.get("severity") == "high"]
+    )
+
     return {
         "occupied_regions": occupied_regions,
         "empty_regions": len(region_occupancy) - occupied_regions,
         "total_violations": total_violations,
         "high_severity_violations": high_severity_violations,
-        "compliance_rate": 1.0 - (total_violations / max(1, len(region_occupancy))) if region_occupancy else 1.0
+        "compliance_rate": 1.0 - (total_violations / max(1, len(region_occupancy)))
+        if region_occupancy
+        else 1.0,
     }
 
 
@@ -425,64 +447,88 @@ def visualize_detections_with_regions(image, detections, region_analysis):
     try:
         # 复制图像以避免修改原图
         annotated_image = image.copy()
-        
+
         # 绘制区域
         if region_manager is not None:
             for region_id, region in region_manager.regions.items():
                 if not region.is_active:
                     continue
-                    
+
                 # 获取区域占用信息
-                occupancy = region_analysis.get("region_occupancy", {}).get(region_id, {})
+                occupancy = region_analysis.get("region_occupancy", {}).get(
+                    region_id, {}
+                )
                 current_occupancy = occupancy.get("current_occupancy", 0)
-                
+
                 # 根据占用情况选择颜色
                 if current_occupancy > 0:
                     color = (0, 255, 0)  # 绿色 - 有人
                 else:
                     color = (128, 128, 128)  # 灰色 - 无人
-                
+
                 # 检查是否有违规
                 violations = region_analysis.get("violations", [])
-                region_violations = [v for v in violations if v.get("region_id") == region_id]
+                region_violations = [
+                    v for v in violations if v.get("region_id") == region_id
+                ]
                 if region_violations:
                     color = (0, 0, 255)  # 红色 - 有违规
-                
+
                 # 绘制区域多边形
                 if len(region.polygon) >= 3:
-                    points = np.array([(int(p[0]), int(p[1])) for p in region.polygon], np.int32)
+                    points = np.array(
+                        [(int(p[0]), int(p[1])) for p in region.polygon], np.int32
+                    )
                     cv2.polylines(annotated_image, [points], True, color, 2)
-                    
+
                     # 填充半透明区域
                     overlay = annotated_image.copy()
                     cv2.fillPoly(overlay, [points], color)
-                    cv2.addWeighted(annotated_image, 0.8, overlay, 0.2, 0, annotated_image)
-                    
+                    cv2.addWeighted(
+                        annotated_image, 0.8, overlay, 0.2, 0, annotated_image
+                    )
+
                     # 添加区域标签
                     label = f"{region.name} ({current_occupancy})"
                     label_pos = (int(points[0][0]), int(points[0][1]) - 10)
-                    cv2.putText(annotated_image, label, label_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-        
+                    cv2.putText(
+                        annotated_image,
+                        label,
+                        label_pos,
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        color,
+                        2,
+                    )
+
         # 绘制人体检测框
         for person_idx, detection in enumerate(detections):
-            bbox = detection.get('bbox', [0, 0, 0, 0])
-            confidence = detection.get('confidence', 0.0)
-            
+            bbox = detection.get("bbox", [0, 0, 0, 0])
+            confidence = detection.get("confidence", 0.0)
+
             # 绘制检测框
             x1, y1, x2, y2 = map(int, bbox)
             cv2.rectangle(annotated_image, (x1, y1), (x2, y2), (255, 0, 0), 2)
-            
+
             # 添加人员标签
             label = f"Person {person_idx + 1} ({confidence:.2f})"
-            cv2.putText(annotated_image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
-            
+            cv2.putText(
+                annotated_image,
+                label,
+                (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 0, 0),
+                2,
+            )
+
             # 绘制人员中心点
             center_x = int((x1 + x2) / 2)
             center_y = int((y1 + y2) / 2)
             cv2.circle(annotated_image, (center_x, center_y), 5, (255, 255, 0), -1)
-        
+
         return annotated_image
-        
+
     except Exception as e:
         logger.error(f"可视化失败: {e}")
         return image
@@ -492,16 +538,18 @@ def add_hairnet_annotations(image, detections, hairnet_results):
     """在图像上添加发网检测结果的注释"""
     try:
         annotated_image = image.copy()
-        
-        for i, (detection, hairnet_result) in enumerate(zip(detections, hairnet_results)):
-            bbox = detection.get('bbox', [0, 0, 0, 0])
+
+        for i, (detection, hairnet_result) in enumerate(
+            zip(detections, hairnet_results)
+        ):
+            bbox = detection.get("bbox", [0, 0, 0, 0])
             x1, y1, x2, y2 = map(int, bbox)
-            
+
             # 获取发网检测结果
-            has_hairnet = hairnet_result.get('has_hairnet', False)
-            confidence = hairnet_result.get('confidence', 0.0)
-            status = hairnet_result.get('status', 'unknown')
-            
+            has_hairnet = hairnet_result.get("has_hairnet", False)
+            confidence = hairnet_result.get("confidence", 0.0)
+            status = hairnet_result.get("status", "unknown")
+
             # 根据发网状态选择颜色
             if has_hairnet:
                 hairnet_color = (0, 255, 0)  # 绿色 - 有发网
@@ -509,30 +557,42 @@ def add_hairnet_annotations(image, detections, hairnet_results):
             else:
                 hairnet_color = (0, 0, 255)  # 红色 - 无发网
                 status_text = f"发网: 否 ({confidence:.2f})"
-            
+
             # 在人体检测框右上角添加发网状态
             text_x = x2 - 150
             text_y = y1 + 20
-            
+
             # 确保文本不超出图像边界
             if text_x < 0:
                 text_x = x1 + 10
             if text_y < 20:
                 text_y = y2 - 10
-            
+
             # 绘制发网状态文本背景
-            text_size = cv2.getTextSize(status_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
-            cv2.rectangle(annotated_image, 
-                         (text_x - 5, text_y - text_size[1] - 5),
-                         (text_x + text_size[0] + 5, text_y + 5),
-                         (0, 0, 0), -1)
-            
+            text_size = cv2.getTextSize(status_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[
+                0
+            ]
+            cv2.rectangle(
+                annotated_image,
+                (text_x - 5, text_y - text_size[1] - 5),
+                (text_x + text_size[0] + 5, text_y + 5),
+                (0, 0, 0),
+                -1,
+            )
+
             # 绘制发网状态文本
-            cv2.putText(annotated_image, status_text, (text_x, text_y),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, hairnet_color, 2)
-        
+            cv2.putText(
+                annotated_image,
+                status_text,
+                (text_x, text_y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                hairnet_color,
+                2,
+            )
+
         return annotated_image
-        
+
     except Exception as e:
         logger.error(f"添加发网注释失败: {e}")
         return image
@@ -799,7 +859,7 @@ def add_video_annotations(frame, detection_results, frame_number, fps):
     """为视频帧添加检测标注"""
     annotated_frame = frame.copy()
     height, width = annotated_frame.shape[:2]
-    
+
     # 定义颜色
     colors = {
         "with_hairnet": (0, 255, 0),  # 绿色 - 佩戴发网
@@ -807,45 +867,45 @@ def add_video_annotations(frame, detection_results, frame_number, fps):
         "info_bg": (0, 0, 0),  # 黑色 - 信息背景
         "info_text": (255, 255, 255),  # 白色 - 信息文字
     }
-    
+
     # 字体设置
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 0.7
     thickness = 2
     text_thickness = 1
-    
+
     # 添加检测框和标签
     detections = detection_results.get("detections", [])
     for detection in detections:
         bbox = detection.get("bbox", [])
         if len(bbox) != 4:
             continue
-            
+
         x1, y1, x2, y2 = map(int, bbox)
         x1, y1 = max(0, x1), max(0, y1)
         x2, y2 = min(width, x2), min(height, y2)
-        
+
         has_hairnet = detection.get("has_hairnet", False)
         confidence = detection.get("confidence", 0.0)
-        
+
         # 选择颜色
         color = colors["with_hairnet"] if has_hairnet else colors["without_hairnet"]
-        
+
         # 绘制边界框
         cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, thickness)
-        
+
         # 准备标签文本
         status = "With Hairnet" if has_hairnet else "No Hairnet"
         label = f"{status} ({confidence:.2f})"
-        
+
         # 计算文本尺寸并绘制
         (text_width, text_height), baseline = cv2.getTextSize(
             label, font, font_scale, text_thickness
         )
-        
+
         text_x = x1
         text_y = y1 - 10 if y1 - 10 > text_height else y1 + text_height + 10
-        
+
         # 绘制文本背景
         cv2.rectangle(
             annotated_frame,
@@ -854,7 +914,7 @@ def add_video_annotations(frame, detection_results, frame_number, fps):
             colors["info_bg"],
             -1,
         )
-        
+
         # 绘制文本
         cv2.putText(
             annotated_frame,
@@ -865,35 +925,35 @@ def add_video_annotations(frame, detection_results, frame_number, fps):
             colors["info_text"],
             text_thickness,
         )
-    
+
     # 添加帧信息和统计信息
     timestamp = frame_number / fps if fps > 0 else 0
     total_persons = detection_results.get("total_persons", 0)
     persons_with_hairnet = detection_results.get("persons_with_hairnet", 0)
     compliance_rate = detection_results.get("compliance_rate", 0.0)
-    
+
     # 准备信息文本
     info_lines = [
         f"Frame: {frame_number}",
         f"Time: {timestamp:.2f}s",
         f"Total: {total_persons}",
         f"With Hairnet: {persons_with_hairnet}",
-        f"Compliance: {compliance_rate:.1%}"
+        f"Compliance: {compliance_rate:.1%}",
     ]
-    
+
     # 在左上角绘制信息
     info_x = 10
     info_y = 30
     line_height = 25
-    
+
     for i, line in enumerate(info_lines):
         y_pos = info_y + i * line_height
-        
+
         # 计算文本尺寸
         (text_width, text_height), baseline = cv2.getTextSize(
             line, font, font_scale * 0.8, text_thickness
         )
-        
+
         # 绘制文本背景
         cv2.rectangle(
             annotated_frame,
@@ -902,7 +962,7 @@ def add_video_annotations(frame, detection_results, frame_number, fps):
             colors["info_bg"],
             -1,
         )
-        
+
         # 绘制文本
         cv2.putText(
             annotated_frame,
@@ -913,7 +973,7 @@ def add_video_annotations(frame, detection_results, frame_number, fps):
             colors["info_text"],
             text_thickness,
         )
-    
+
     return annotated_frame
 
 
@@ -990,7 +1050,7 @@ async def startup_event():
             logger.info("检测器初始化成功")
         except Exception as e:
             logger.error(f"数据管理器初始化失败: {e}")
-        
+
         # 初始化区域管理器和规则引擎
         try:
             if RegionManager is not None:
@@ -998,7 +1058,7 @@ async def startup_event():
                 logger.info("区域管理器初始化成功")
             else:
                 logger.warning("RegionManager 不可用，跳过初始化")
-                
+
             if RuleEngine is not None:
                 rule_engine = RuleEngine()
                 # 加载默认规则配置
@@ -1010,7 +1070,7 @@ async def startup_event():
                 logger.warning("RuleEngine 不可用，跳过初始化")
         except Exception as e:
             logger.error(f"区域管理器或规则引擎初始化失败: {e}")
-            
+
     except Exception as e:
         logger.error(f"检测器初始化失败: {e}")
         raise
@@ -1098,6 +1158,7 @@ async def detect_image(file: UploadFile = File(...)):
 
         # 执行检测
         import time
+
         start_time = time.time()
         results = detector.detect(image)
         processing_time = time.time() - start_time
@@ -1146,6 +1207,7 @@ async def detect_with_region_analysis(file: UploadFile = File(...)):
 
         # 执行人体检测
         import time
+
         start_time = time.time()
         detections = detector.detect(image)
         detection_time = time.time() - start_time
@@ -1157,56 +1219,69 @@ async def detect_with_region_analysis(file: UploadFile = File(...)):
             try:
                 # 对每个检测到的人员进行发网检测
                 for i, detection in enumerate(detections):
-                    bbox = detection.get('bbox', [0, 0, 0, 0])
+                    bbox = detection.get("bbox", [0, 0, 0, 0])
                     x1, y1, x2, y2 = map(int, bbox)
-                    
+
                     # 提取头部区域（扩展检测框的上半部分）
                     head_height = int((y2 - y1) * 0.3)  # 头部占身体高度的30%
                     head_y1 = max(0, y1)
                     head_y2 = min(image.shape[0], y1 + head_height)
                     head_x1 = max(0, x1)
                     head_x2 = min(image.shape[1], x2)
-                    
+
                     if head_y2 > head_y1 and head_x2 > head_x1:
                         head_region = image[head_y1:head_y2, head_x1:head_x2]
-                        
+
                         # 进行发网检测
-                        hairnet_result = hairnet_pipeline.detect_hairnet_compliance(head_region)
-                        hairnet_result['person_id'] = i + 1
-                        hairnet_result['head_bbox'] = [head_x1, head_y1, head_x2, head_y2]
+                        hairnet_result = hairnet_pipeline.detect_hairnet_compliance(
+                            head_region
+                        )
+                        hairnet_result["person_id"] = i + 1
+                        hairnet_result["head_bbox"] = [
+                            head_x1,
+                            head_y1,
+                            head_x2,
+                            head_y2,
+                        ]
                         hairnet_results.append(hairnet_result)
                     else:
                         # 如果头部区域无效，添加默认结果
-                        hairnet_results.append({
-                            'person_id': i + 1,
-                            'has_hairnet': False,
-                            'confidence': 0.0,
-                            'status': 'no_hairnet',
-                            'head_bbox': [head_x1, head_y1, head_x2, head_y2],
-                            'error': '头部区域无效'
-                        })
+                        hairnet_results.append(
+                            {
+                                "person_id": i + 1,
+                                "has_hairnet": False,
+                                "confidence": 0.0,
+                                "status": "no_hairnet",
+                                "head_bbox": [head_x1, head_y1, head_x2, head_y2],
+                                "error": "头部区域无效",
+                            }
+                        )
             except Exception as e:
                 logger.error(f"发网检测失败: {e}")
                 # 为每个人员添加错误结果
                 for i in range(len(detections)):
-                    hairnet_results.append({
-                        'person_id': i + 1,
-                        'has_hairnet': False,
-                        'confidence': 0.0,
-                        'status': 'error',
-                        'error': str(e)
-                    })
+                    hairnet_results.append(
+                        {
+                            "person_id": i + 1,
+                            "has_hairnet": False,
+                            "confidence": 0.0,
+                            "status": "error",
+                            "error": str(e),
+                        }
+                    )
         else:
             # 如果发网检测器未初始化，为每个人员添加未检测状态
             for i in range(len(detections)):
-                hairnet_results.append({
-                    'person_id': i + 1,
-                    'has_hairnet': False,
-                    'confidence': 0.0,
-                    'status': 'not_available',
-                    'error': '发网检测器未初始化'
-                })
-        
+                hairnet_results.append(
+                    {
+                        "person_id": i + 1,
+                        "has_hairnet": False,
+                        "confidence": 0.0,
+                        "status": "not_available",
+                        "error": "发网检测器未初始化",
+                    }
+                )
+
         hairnet_time = time.time() - hairnet_start
 
         # 进行区域分析
@@ -1215,10 +1290,14 @@ async def detect_with_region_analysis(file: UploadFile = File(...)):
         region_analysis_time = time.time() - region_analysis_start
 
         # 绘制检测结果和区域信息
-        annotated_image = visualize_detections_with_regions(image, detections, region_analysis)
-        
+        annotated_image = visualize_detections_with_regions(
+            image, detections, region_analysis
+        )
+
         # 在图像上添加发网检测结果
-        annotated_image = add_hairnet_annotations(annotated_image, detections, hairnet_results)
+        annotated_image = add_hairnet_annotations(
+            annotated_image, detections, hairnet_results
+        )
 
         # 将结果图像编码为base64
         _, buffer = cv2.imencode(".jpg", annotated_image)
@@ -1226,8 +1305,12 @@ async def detect_with_region_analysis(file: UploadFile = File(...)):
 
         # 统计发网合规情况
         total_persons = len(detections)
-        persons_with_hairnet = len([r for r in hairnet_results if r.get('has_hairnet', False)])
-        compliance_rate = (persons_with_hairnet / total_persons) if total_persons > 0 else 0.0
+        persons_with_hairnet = len(
+            [r for r in hairnet_results if r.get("has_hairnet", False)]
+        )
+        compliance_rate = (
+            (persons_with_hairnet / total_persons) if total_persons > 0 else 0.0
+        )
 
         return {
             "success": True,
@@ -1240,7 +1323,9 @@ async def detect_with_region_analysis(file: UploadFile = File(...)):
             "processing_time": round(detection_time, 3),
             "hairnet_detection_time": round(hairnet_time, 3),
             "region_analysis_time": round(region_analysis_time, 3),
-            "total_time": round(detection_time + hairnet_time + region_analysis_time, 3),
+            "total_time": round(
+                detection_time + hairnet_time + region_analysis_time, 3
+            ),
             "annotated_image": img_base64,
             "region_analysis": region_analysis,
         }
@@ -1505,13 +1590,19 @@ async def detect_hairnet(file: UploadFile = File(...)):
                 results.get("total_persons", 0) if isinstance(results, dict) else 0
             ),
             "persons_with_hairnet": (
-                results.get("persons_with_hairnet", 0) if isinstance(results, dict) else 0
+                results.get("persons_with_hairnet", 0)
+                if isinstance(results, dict)
+                else 0
             ),
             "persons_without_hairnet": (
-                results.get("persons_without_hairnet", 0) if isinstance(results, dict) else 0
+                results.get("persons_without_hairnet", 0)
+                if isinstance(results, dict)
+                else 0
             ),
             "compliance_rate": (
-                results.get("compliance_rate", 0.0) if isinstance(results, dict) else 0.0
+                results.get("compliance_rate", 0.0)
+                if isinstance(results, dict)
+                else 0.0
             ),
             "frame_id": frame_id,
             "annotated_image": annotated_image_base64,
@@ -1523,9 +1614,11 @@ async def detect_hairnet(file: UploadFile = File(...)):
 
 
 @app.post("/api/v1/detect/hairnet/video")
-async def detect_hairnet_video(file: UploadFile = File(...), record_process: str = "false"):
+async def detect_hairnet_video(
+    file: UploadFile = File(...), record_process: str = "false"
+):
     """视频发网检测接口
-    
+
     Args:
         file: 上传的视频文件
         record_process: 是否录制检测过程，生成带标注的视频 (字符串 "true" 或 "false")
@@ -1553,7 +1646,7 @@ async def detect_hairnet_video(file: UploadFile = File(...), record_process: str
         # 如果需要录制检测过程，创建输出视频文件
         output_video_path = None
         video_writer = None
-        
+
         if record_process_bool:
             output_video_path = temp_video_path.replace(".mp4", "_detected.mp4")
             logger.info(f"录制模式开启，输出视频路径: {output_video_path}")
@@ -1573,10 +1666,14 @@ async def detect_hairnet_video(file: UploadFile = File(...), record_process: str
 
             # 如果需要录制，初始化视频写入器
             if record_process_bool and output_video_path:
-                fourcc = cv2.VideoWriter.fourcc(*'mp4v')
-                video_writer = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
+                fourcc = cv2.VideoWriter.fourcc(*"mp4v")
+                video_writer = cv2.VideoWriter(
+                    output_video_path, fourcc, fps, (width, height)
+                )
                 if video_writer.isOpened():
-                    logger.info(f"视频写入器初始化成功: {output_video_path}, 分辨率: {width}x{height}, FPS: {fps}")
+                    logger.info(
+                        f"视频写入器初始化成功: {output_video_path}, 分辨率: {width}x{height}, FPS: {fps}"
+                    )
                 else:
                     logger.error(f"视频写入器初始化失败: {output_video_path}")
                     video_writer = None
@@ -1649,7 +1746,9 @@ async def detect_hairnet_video(file: UploadFile = File(...), record_process: str
 
                         # 如果需要录制，在标注帧上添加检测结果
                         if record_process_bool and annotated_frame is not None:
-                            annotated_frame = add_video_annotations(annotated_frame, results, frame_count, fps)
+                            annotated_frame = add_video_annotations(
+                                annotated_frame, results, frame_count, fps
+                            )
 
                         if (
                             isinstance(results, dict)
@@ -1752,16 +1851,20 @@ async def detect_hairnet_video(file: UploadFile = File(...), record_process: str
                     "frame_results": frame_results,
                     "frame_id": frame_id,
                 }
-                
+
                 # 如果录制了检测过程，添加输出视频信息
-                if record_process_bool and output_video_path and os.path.exists(output_video_path):
+                if (
+                    record_process_bool
+                    and output_video_path
+                    and os.path.exists(output_video_path)
+                ):
                     result["output_video"] = {
                         "path": output_video_path,
                         "filename": os.path.basename(output_video_path),
-                        "size_bytes": os.path.getsize(output_video_path)
+                        "size_bytes": os.path.getsize(output_video_path),
                     }
                     logger.info(f"生成带标注的视频文件: {output_video_path}")
-                
+
                 return result
             else:
                 return {
@@ -1799,26 +1902,26 @@ async def detect_hairnet_video(file: UploadFile = File(...), record_process: str
 async def download_processed_video(filename: str):
     """下载处理后的视频文件"""
     import tempfile
-    
+
     # 构建文件路径（在临时目录中查找）
     temp_dir = tempfile.gettempdir()
     file_path = None
-    
+
     # 查找匹配的文件
     for file in os.listdir(temp_dir):
         if file.endswith("_detected.mp4") and filename in file:
             file_path = os.path.join(temp_dir, file)
             break
-    
+
     if not file_path or not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="视频文件未找到")
-    
+
     # 返回文件
     return FileResponse(
         path=file_path,
         filename=filename,
         media_type="video/mp4",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 
@@ -1833,7 +1936,11 @@ async def get_realtime_statistics():
             "persons_with_hairnet": 0,
             "current_compliance_rate": 0.0,
             "timestamp": datetime.now().isoformat(),
-            "today": {"today_detections": 63, "today_persons": 88, "today_with_hairnet": 18}
+            "today": {
+                "today_detections": 63,
+                "today_persons": 88,
+                "today_with_hairnet": 18,
+            },
         }
 
     try:
@@ -1862,9 +1969,9 @@ async def get_statistics():
             "total_persons_detected": 0,
             "average_compliance_rate": 0.0,
             "date_range": "today",
-            "last_updated": datetime.now().isoformat()
+            "last_updated": datetime.now().isoformat(),
         }
-    
+
     try:
         realtime_stats = data_manager.get_realtime_statistics()
         today_stats = realtime_stats.get("today", {})
@@ -1873,7 +1980,7 @@ async def get_statistics():
             "total_persons_detected": today_stats.get("today_persons", 0),
             "average_compliance_rate": today_stats.get("today_compliance_rate", 0.0),
             "date_range": "today",
-            "last_updated": datetime.now().isoformat()
+            "last_updated": datetime.now().isoformat(),
         }
     except Exception as e:
         logger.error(f"获取统计数据失败: {e}")
@@ -1882,8 +1989,9 @@ async def get_statistics():
             "total_persons_detected": 0,
             "average_compliance_rate": 0.0,
             "date_range": "today",
-            "last_updated": datetime.now().isoformat()
+            "last_updated": datetime.now().isoformat(),
         }
+
 
 @app.get("/api/statistics/daily")
 async def get_daily_statistics(days: int = 7):
@@ -2233,28 +2341,38 @@ async def get_regions():
     try:
         if region_manager is None:
             return {"regions": [], "message": "区域管理器未初始化"}
-        
+
         regions = []
         for region_id, region in region_manager.regions.items():
-            regions.append({
-                "id": region_id,
-                "name": region.name,
-                "type": region.region_type,
-                "points": [{"x": p[0], "y": p[1]} if isinstance(p, tuple) else {"x": p.x, "y": p.y} for p in region.polygon],
-                "rules": region.rules,
-                "is_active": region.is_active,
-                "description": region_metadata.get(region_id, {}).get('description', ''),
-                "color": region_metadata.get(region_id, {}).get('color', '#007bff')
-            })
-        
+            regions.append(
+                {
+                    "id": region_id,
+                    "name": region.name,
+                    "type": region.region_type,
+                    "points": [
+                        {"x": p[0], "y": p[1]}
+                        if isinstance(p, tuple)
+                        else {"x": p.x, "y": p.y}
+                        for p in region.polygon
+                    ],
+                    "rules": region.rules,
+                    "is_active": region.is_active,
+                    "description": region_metadata.get(region_id, {}).get(
+                        "description", ""
+                    ),
+                    "color": region_metadata.get(region_id, {}).get("color", "#007bff"),
+                }
+            )
+
         return {
             "regions": regions,
             "canvas_size": {"width": 800, "height": 600},
-            "total_count": len(regions)
+            "total_count": len(regions),
         }
     except Exception as e:
         logger.error(f"获取区域配置失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/regions")
 async def save_regions(data: dict):
@@ -2262,72 +2380,73 @@ async def save_regions(data: dict):
     try:
         if region_manager is None:
             raise HTTPException(status_code=503, detail="区域管理器未初始化")
-        
-        regions_data = data.get('regions', [])
-        canvas_size = data.get('canvas_size', {'width': 800, 'height': 600})
-        
+
+        regions_data = data.get("regions", [])
+        canvas_size = data.get("canvas_size", {"width": 800, "height": 600})
+
         # 清空现有区域
         region_manager.regions.clear()
-        
+
         # 添加新区域
         for region_data in regions_data:
             from core.region import Region, RegionType
-            
+
             # 转换点坐标格式
-            points = [(p['x'], p['y']) for p in region_data['points']]
-            
+            points = [(p["x"], p["y"]) for p in region_data["points"]]
+
             # 转换区域类型
             try:
-                region_type = RegionType(region_data['type'])
+                region_type = RegionType(region_data["type"])
             except ValueError:
                 region_type = RegionType.MONITORING  # 默认类型
-            
+
             # 创建区域对象
             region = Region(
-                region_id=region_data['id'],
+                region_id=region_data["id"],
                 region_type=region_type,
                 polygon=points,
-                name=region_data['name']
+                name=region_data["name"],
             )
-            
+
             # 设置规则
-            if 'rules' in region_data:
-                region.rules.update(region_data['rules'])
-            
+            if "rules" in region_data:
+                region.rules.update(region_data["rules"])
+
             # 设置激活状态
-            region.is_active = region_data.get('is_active', True)
-            
+            region.is_active = region_data.get("is_active", True)
+
             # 存储自定义属性到全局元数据中
             global region_metadata
-            region_metadata[region_data['id']] = {
-                'description': region_data.get('description', ''),
-                'color': region_data.get('color', '#007bff')
+            region_metadata[region_data["id"]] = {
+                "description": region_data.get("description", ""),
+                "color": region_data.get("color", "#007bff"),
             }
-            
+
             region_manager.add_region(region)
-        
+
         # 保存配置到文件
         config_path = os.path.join(project_root, "config", "regions.json")
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        
+
         config = {
             "regions": regions_data,
             "canvas_size": canvas_size,
-            "saved_at": datetime.now().isoformat()
+            "saved_at": datetime.now().isoformat(),
         }
-        
-        with open(config_path, 'w', encoding='utf-8') as f:
+
+        with open(config_path, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
-        
+
         return {
             "success": True,
             "message": f"成功保存 {len(regions_data)} 个区域配置",
-            "saved_count": len(regions_data)
+            "saved_count": len(regions_data),
         }
-        
+
     except Exception as e:
         logger.error(f"保存区域配置失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.delete("/api/regions/{region_id}")
 async def delete_region(region_id: str):
@@ -2335,17 +2454,18 @@ async def delete_region(region_id: str):
     try:
         if region_manager is None:
             raise HTTPException(status_code=503, detail="区域管理器未初始化")
-        
+
         if region_manager.remove_region(region_id):
             return {"success": True, "message": f"区域 {region_id} 已删除"}
         else:
             raise HTTPException(status_code=404, detail="区域不存在")
-            
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"删除区域失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # 规则引擎API端点
 @app.get("/api/rules")
@@ -2354,31 +2474,34 @@ async def get_rules():
     try:
         if rule_engine is None:
             return {"rules": [], "message": "规则引擎未初始化"}
-        
+
         rules = []
         for rule_id, rule in rule_engine.rules.items():
-            rules.append({
-                "rule_id": rule.rule_id,
-                "name": rule.name,
-                "rule_type": rule.rule_type.value,
-                "priority": rule.priority.value,
-                "conditions": [cond.__dict__ for cond in rule.conditions],
-                "actions": rule.actions,
-                "is_active": rule.is_active,
-                "description": rule.description,
-                "metadata": rule.metadata,
-                "created_at": rule.created_at,
-                "updated_at": rule.updated_at
-            })
-        
+            rules.append(
+                {
+                    "rule_id": rule.rule_id,
+                    "name": rule.name,
+                    "rule_type": rule.rule_type.value,
+                    "priority": rule.priority.value,
+                    "conditions": [cond.__dict__ for cond in rule.conditions],
+                    "actions": rule.actions,
+                    "is_active": rule.is_active,
+                    "description": rule.description,
+                    "metadata": rule.metadata,
+                    "created_at": rule.created_at,
+                    "updated_at": rule.updated_at,
+                }
+            )
+
         return {
             "rules": rules,
             "total_count": len(rules),
-            "stats": rule_engine.get_stats()
+            "stats": rule_engine.get_stats(),
         }
     except Exception as e:
         logger.error(f"获取规则失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/rules")
 async def create_rule(rule_data: dict):
@@ -2386,42 +2509,45 @@ async def create_rule(rule_data: dict):
     try:
         if rule_engine is None:
             raise HTTPException(status_code=503, detail="规则引擎未初始化")
-        
-        from core.rule_engine import Rule, RuleType, RulePriority, RuleCondition
-        
+
+        from core.rule_engine import Rule, RuleCondition, RulePriority, RuleType
+
         # 创建规则条件
         conditions = []
-        for cond_data in rule_data.get('conditions', []):
-            conditions.append(RuleCondition(
-                field=cond_data['field'],
-                operator=cond_data['operator'],
-                value=cond_data['value'],
-                description=cond_data.get('description', '')
-            ))
-        
+        for cond_data in rule_data.get("conditions", []):
+            conditions.append(
+                RuleCondition(
+                    field=cond_data["field"],
+                    operator=cond_data["operator"],
+                    value=cond_data["value"],
+                    description=cond_data.get("description", ""),
+                )
+            )
+
         # 创建规则
         rule = Rule(
-            rule_id=rule_data['rule_id'],
-            name=rule_data['name'],
-            rule_type=RuleType(rule_data['rule_type']),
-            priority=RulePriority(rule_data['priority']),
+            rule_id=rule_data["rule_id"],
+            name=rule_data["name"],
+            rule_type=RuleType(rule_data["rule_type"]),
+            priority=RulePriority(rule_data["priority"]),
             conditions=conditions,
-            actions=rule_data.get('actions', []),
-            is_active=rule_data.get('is_active', True),
-            description=rule_data.get('description', ''),
-            metadata=rule_data.get('metadata', {})
+            actions=rule_data.get("actions", []),
+            is_active=rule_data.get("is_active", True),
+            description=rule_data.get("description", ""),
+            metadata=rule_data.get("metadata", {}),
         )
-        
+
         if rule_engine.add_rule(rule):
             return {"success": True, "message": f"规则 '{rule.name}' 创建成功"}
         else:
             raise HTTPException(status_code=400, detail="规则已存在")
-            
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"创建规则失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/violations")
 async def get_violations():
@@ -2429,35 +2555,38 @@ async def get_violations():
     try:
         if rule_engine is None:
             return {"violations": [], "message": "规则引擎未初始化"}
-        
+
         violations = []
         for violation_id, violation in rule_engine.violations.items():
-            violations.append({
-                "violation_id": violation.violation_id,
-                "rule_id": violation.rule_id,
-                "rule_name": violation.rule_name,
-                "region_id": violation.region_id,
-                "track_id": violation.track_id,
-                "severity": violation.severity.value,
-                "message": violation.message,
-                "details": violation.details,
-                "timestamp": violation.timestamp,
-                "acknowledged": violation.acknowledged,
-                "resolved": violation.resolved
-            })
-        
+            violations.append(
+                {
+                    "violation_id": violation.violation_id,
+                    "rule_id": violation.rule_id,
+                    "rule_name": violation.rule_name,
+                    "region_id": violation.region_id,
+                    "track_id": violation.track_id,
+                    "severity": violation.severity.value,
+                    "message": violation.message,
+                    "details": violation.details,
+                    "timestamp": violation.timestamp,
+                    "acknowledged": violation.acknowledged,
+                    "resolved": violation.resolved,
+                }
+            )
+
         # 按时间戳倒序排列
-        violations.sort(key=lambda x: x['timestamp'], reverse=True)
-        
+        violations.sort(key=lambda x: x["timestamp"], reverse=True)
+
         return {
             "violations": violations,
             "total_count": len(violations),
             "active_count": len(rule_engine.get_active_violations()),
-            "stats": rule_engine.get_stats()
+            "stats": rule_engine.get_stats(),
         }
     except Exception as e:
         logger.error(f"获取违规记录失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/violations/{violation_id}/acknowledge")
 async def acknowledge_violation(violation_id: str):
@@ -2465,17 +2594,18 @@ async def acknowledge_violation(violation_id: str):
     try:
         if rule_engine is None:
             raise HTTPException(status_code=503, detail="规则引擎未初始化")
-        
+
         if rule_engine.acknowledge_violation(violation_id):
             return {"success": True, "message": "违规已确认"}
         else:
             raise HTTPException(status_code=404, detail="违规记录不存在")
-            
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"确认违规失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/violations/{violation_id}/resolve")
 async def resolve_violation(violation_id: str):
@@ -2483,17 +2613,18 @@ async def resolve_violation(violation_id: str):
     try:
         if rule_engine is None:
             raise HTTPException(status_code=503, detail="规则引擎未初始化")
-        
+
         if rule_engine.resolve_violation(violation_id):
             return {"success": True, "message": "违规已解决"}
         else:
             raise HTTPException(status_code=404, detail="违规记录不存在")
-            
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"解决违规失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn

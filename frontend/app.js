@@ -230,7 +230,7 @@ class HumanDetectionApp {
         try {
             const formData = new FormData();
             formData.append('file', this.selectedFile);
-            
+
             // 如果是视频检测，添加录制参数
             if (this.currentFileType === 'video') {
                 const recordChecked = this.recordProcessCheckbox.checked;
@@ -302,7 +302,7 @@ class HumanDetectionApp {
                 </div>
             `;
         }
-        
+
         // 视频下载按钮
         let videoDownloadHtml = '';
         if (this.currentFileType === 'video' && result.output_video) {
