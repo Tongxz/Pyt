@@ -33,20 +33,42 @@
 ```
 ├── src/
 │   ├── api/                 # FastAPI应用
-│   │   ├── app.py          # 主应用文件
-│   │   └── routes/         # API路由
+│   │   └── app.py          # 主应用文件
 │   ├── core/               # 核心检测模块
 │   │   ├── detector.py     # 人体检测器
 │   │   ├── hairnet_detector.py  # 发网检测器
+│   │   ├── yolo_hairnet_detector.py # YOLO发网检测器
 │   │   └── data_manager.py # 数据管理
+│   ├── config/             # 配置模块
 │   └── utils/              # 工具函数
+├── docs/                   # 技术文档
+│   ├── README_HAIRNET_DETECTION.md  # 发网检测文档
+│   ├── README_ADD_DATASET.md        # 数据集添加指南
+│   ├── README_YOLO_INTEGRATION.md   # YOLO集成文档
+│   ├── README_WEB_TESTING.md        # Web测试文档
+│   ├── 技术方案.md                   # 技术方案文档
+│   ├── 项目执行方案.md               # 项目执行方案
+│   └── 敏捷迭代执行方案.md           # 敏捷迭代方案
+├── deployment/             # 部署脚本
+│   └── deploy_win.bat     # Windows部署脚本
+├── development/            # 开发环境脚本
+│   ├── setup_dev_env.sh   # 环境配置脚本
+│   └── start_dev.sh       # 开发启动脚本
+├── training/               # 训练脚本
+│   ├── start_training.sh   # Linux/macOS训练脚本
+│   └── start_training.ps1  # Windows训练脚本
+├── testing/                # 测试脚本
+│   ├── start_testing.sh    # 模型测试脚本
+│   └── test_api_curl.sh    # API测试脚本
+│   📝 **注意**: 所有脚本已修复路径引用问题，可从任意位置执行
 ├── frontend/               # 前端界面
-├── config/                 # 配置文件
-├── models/                 # 模型文件
+├── models/                 # 模型文件和训练结果
+├── datasets/               # 训练数据集
 ├── tests/                  # 测试代码
 │   ├── unit/              # 单元测试
-│   └── integration/       # 集成测试
-└── scripts/                # 脚本工具
+│   ├── integration/       # 集成测试
+│   └── fixtures/          # 测试数据
+└── scripts/                # 开发工具脚本
 ```
 
 ## 🏗️ 系统架构
@@ -120,6 +142,40 @@ venv\Scripts\activate     # Windows
 # 安装依赖
 pip install -r requirements.txt
 ```
+
+### 自训练模型
+
+#### 模型训练
+
+```bash
+# 训练发网检测模型
+python train_hairnet_model.py
+
+# 使用自定义配置训练
+python train_hairnet_model.py --epochs 100 --batch-size 16
+```
+
+#### 数据集管理
+
+```bash
+# 准备Roboflow数据集
+python prepare_roboflow_dataset.py
+
+# 添加新的训练数据
+python add_dataset.py --images path/to/images --labels path/to/labels
+```
+
+#### 模型测试
+
+```bash
+# 测试训练好的模型
+python test_hairnet_model.py
+
+# 测试指定模型文件
+python test_hairnet_model.py --model models/hairnet_model/weights/best.pt
+```
+
+更多详细信息请参考 [docs/README_HAIRNET_DETECTION.md](docs/README_HAIRNET_DETECTION.md)
 
 ### 基本使用
 

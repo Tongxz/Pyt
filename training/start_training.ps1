@@ -1,5 +1,9 @@
 # Hairnet Detection Model Training Script (PowerShell Version)
 
+# 设置项目根目录 (脚本现在在training子目录中，需要回到上级目录)
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+Set-Location $ProjectRoot
+
 param(
     [int]$Epochs = 100,
     [int]$BatchSize = 16,

@@ -3,6 +3,10 @@
 # 开发环境启动脚本
 # 自动检测环境、安装依赖、启动服务
 
+# 设置项目根目录 (脚本现在在development子目录中，需要回到上级目录)
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_ROOT"
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'

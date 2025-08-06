@@ -29,8 +29,8 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 项目根目录
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 项目根目录 (脚本现在在development子目录中，需要回到上级目录)
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 log_info "开始设置开发环境..."
@@ -222,7 +222,7 @@ create_startup_scripts() {
 #!/bin/bash
 # 开发服务器启动脚本
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # 激活虚拟环境
@@ -249,7 +249,7 @@ EOF
 #!/bin/bash
 # 前端服务器启动脚本
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "启动前端服务器..."

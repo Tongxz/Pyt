@@ -7,6 +7,9 @@ chcp 65001 >nul
 
 setlocal enabledelayedexpansion
 
+REM 设置项目根目录 (脚本现在在deployment子目录中，需要回到上级目录)
+cd /d "%~dp0.."
+
 echo ========================================
 echo 人体行为检测系统 - Windows 部署脚本
 echo ========================================

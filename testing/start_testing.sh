@@ -2,6 +2,10 @@
 
 # 发网检测模型测试启动脚本
 
+# 设置项目根目录 (脚本现在在testing子目录中，需要回到上级目录)
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_ROOT"
+
 # 检查ultralytics是否已安装
 if ! python -c "import ultralytics" &> /dev/null; then
     echo "正在安装ultralytics..."

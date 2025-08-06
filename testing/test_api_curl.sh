@@ -2,6 +2,10 @@
 
 # 测试发网检测API的简单脚本
 
+# 设置项目根目录 (脚本现在在testing子目录中，需要回到上级目录)
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_ROOT"
+
 echo "=== 测试健康检查 ==="
 curl -s http://localhost:8000/health
 
