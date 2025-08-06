@@ -39,7 +39,7 @@ log_info "项目根目录: $PROJECT_ROOT"
 # 检查Python版本
 check_python_version() {
     log_info "检查Python版本..."
-    
+
     if [ -f ".python-version" ]; then
         REQUIRED_VERSION=$(cat .python-version)
         log_info "项目要求Python版本: $REQUIRED_VERSION"
@@ -47,17 +47,17 @@ check_python_version() {
         REQUIRED_VERSION="3.10"
         log_warning "未找到.python-version文件，使用默认版本: $REQUIRED_VERSION"
     fi
-    
+
     if command -v python3 &> /dev/null; then
         CURRENT_VERSION=$(python3 --version | cut -d' ' -f2)
         log_info "当前Python版本: $CURRENT_VERSION"
-        
+
         # 简单版本比较（主要检查主版本号和次版本号）
         REQUIRED_MAJOR=$(echo $REQUIRED_VERSION | cut -d'.' -f1)
         REQUIRED_MINOR=$(echo $REQUIRED_VERSION | cut -d'.' -f2)
         CURRENT_MAJOR=$(echo $CURRENT_VERSION | cut -d'.' -f1)
         CURRENT_MINOR=$(echo $CURRENT_VERSION | cut -d'.' -f2)
-        
+
         if [ "$CURRENT_MAJOR" -eq "$REQUIRED_MAJOR" ] && [ "$CURRENT_MINOR" -ge "$REQUIRED_MINOR" ]; then
             log_success "Python版本符合要求"
         else
@@ -73,9 +73,9 @@ check_python_version() {
 # 检查并创建虚拟环境
 setup_virtual_env() {
     log_info "检查虚拟环境..."
-    
+
     VENV_DIR="venv"
-    
+
     if [ ! -d "$VENV_DIR" ]; then
         log_info "创建虚拟环境..."
         python3 -m venv "$VENV_DIR"
@@ -83,12 +83,12 @@ setup_virtual_env() {
     else
         log_info "虚拟环境已存在"
     fi
-    
+
     # 激活虚拟环境
     log_info "激活虚拟环境..."
     source "$VENV_DIR/bin/activate"
     log_success "虚拟环境已激活"
-    
+
     # 升级pip
     log_info "升级pip..."
     pip install --upgrade pip
@@ -97,7 +97,7 @@ setup_virtual_env() {
 # 检查依赖文件
 check_requirements_files() {
     log_info "检查依赖文件..."
-    
+
     if [ -f "requirements.txt" ]; then
         log_success "找到requirements.txt"
         REQUIREMENTS_FILE="requirements.txt"
@@ -116,16 +116,16 @@ check_requirements_files() {
 # 检查已安装的包
 check_installed_packages() {
     log_info "检查已安装的包..."
-    
+
     # 获取已安装包列表
     pip list --format=freeze > installed_packages.tmp
-    
+
     log_info "当前已安装的主要包:"
     echo "----------------------------------------"
-    
+
     # 检查关键包
     KEY_PACKAGES=("torch" "torchvision" "ultralytics" "opencv-python" "fastapi" "numpy" "pillow")
-    
+
     for package in "${KEY_PACKAGES[@]}"; do
         if pip show "$package" &> /dev/null; then
             VERSION=$(pip show "$package" | grep Version | cut -d' ' -f2)
@@ -134,7 +134,7 @@ check_installed_packages() {
             log_warning "$package: 未安装"
         fi
     done
-    
+
     echo "----------------------------------------"
     rm -f installed_packages.tmp
 }
@@ -142,16 +142,16 @@ check_installed_packages() {
 # 安装依赖
 install_dependencies() {
     log_info "安装项目依赖..."
-    
+
     if [ "$REQUIREMENTS_FILE" = "pyproject.toml" ]; then
         log_info "使用pip安装pyproject.toml中的依赖..."
         pip install -e .
     else
         log_info "从$REQUIREMENTS_FILE安装依赖..."
-        
+
         # 过滤掉注释行和空行
         grep -v '^#' "$REQUIREMENTS_FILE" | grep -v '^$' > filtered_requirements.tmp
-        
+
         # 逐行安装，跳过有问题的包
         while IFS= read -r line; do
             if [[ $line == *"#"* ]]; then
@@ -159,9 +159,9 @@ install_dependencies() {
                 log_warning "跳过注释的依赖: $line"
                 continue
             fi
-            
+
             package_name=$(echo "$line" | cut -d'>' -f1 | cut -d'=' -f1 | cut -d'<' -f1)
-            
+
             log_info "安装: $line"
             if pip install "$line"; then
                 log_success "成功安装: $package_name"
@@ -169,7 +169,7 @@ install_dependencies() {
                 log_warning "安装失败，跳过: $package_name"
             fi
         done < filtered_requirements.tmp
-        
+
         rm -f filtered_requirements.tmp
     fi
 }
@@ -177,7 +177,7 @@ install_dependencies() {
 # 验证关键依赖
 verify_key_dependencies() {
     log_info "验证关键依赖..."
-    
+
     # 测试导入关键模块
     python3 -c "
 import sys
@@ -216,7 +216,7 @@ except ImportError:
 # 创建启动脚本
 create_startup_scripts() {
     log_info "创建启动脚本..."
-    
+
     # 创建开发服务器启动脚本
     cat > start_dev_server.sh << 'EOF'
 #!/bin/bash
@@ -243,7 +243,7 @@ EOF
 
     chmod +x start_dev_server.sh
     log_success "创建了 start_dev_server.sh"
-    
+
     # 创建前端服务器启动脚本
     cat > start_frontend.sh << 'EOF'
 #!/bin/bash
@@ -288,7 +288,7 @@ show_usage() {
 # 主函数
 main() {
     log_info "=== 开发环境自动设置脚本 ==="
-    
+
     check_python_version
     setup_virtual_env
     check_requirements_files
@@ -297,7 +297,7 @@ main() {
     verify_key_dependencies
     create_startup_scripts
     show_usage
-    
+
     log_success "所有步骤完成！"
 }
 

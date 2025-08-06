@@ -734,9 +734,11 @@ async def detect_hairnet(file: UploadFile = File(...)):
                 if hasattr(hairnet_pipeline, "detect_hairnet_compliance"):
                     logger.info("使用YOLOv8检测器的detect_hairnet_compliance方法")
                     results = hairnet_pipeline.detect_hairnet_compliance(image)
-                    
+
                     # 获取可视化结果 - 使用自定义可视化函数以显示人体和发网检测框
-                    annotated_image = visualize_hairnet_detections(image, results.get("detections", []))
+                    annotated_image = visualize_hairnet_detections(
+                        image, results.get("detections", [])
+                    )
                 elif hasattr(hairnet_pipeline, "detect"):
                     logger.info("使用YOLOv8检测器的detect方法")
                     result = hairnet_pipeline.detect(image)

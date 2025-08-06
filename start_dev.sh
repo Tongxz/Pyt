@@ -43,22 +43,22 @@ command_exists() {
 # 检查Python版本
 check_python_version() {
     log_header "Python版本检查"
-    
+
     if ! command_exists python3; then
         log_error "Python3 未安装"
         return 1
     fi
-    
+
     PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')")
     REQUIRED_VERSION="3.8.0"
-    
+
     if [ -f ".python-version" ]; then
         REQUIRED_VERSION=$(cat .python-version)
     fi
-    
+
     log_info "当前Python版本: $PYTHON_VERSION"
     log_info "要求Python版本: >= $REQUIRED_VERSION"
-    
+
     # 简单版本比较
     if python3 -c "import sys; exit(0 if sys.version_info >= tuple(map(int, '$REQUIRED_VERSION'.split('.'))) else 1)"; then
         log_success "Python版本符合要求"
@@ -72,31 +72,31 @@ check_python_version() {
 # 检查并激活虚拟环境
 setup_virtual_environment() {
     log_header "虚拟环境设置"
-    
+
     # 检查是否已在虚拟环境中
     if [[ "$VIRTUAL_ENV" != "" ]]; then
         log_success "已在虚拟环境中: $VIRTUAL_ENV"
         return 0
     fi
-    
+
     # 查找虚拟环境目录
     VENV_DIRS=("venv" ".venv" "env" ".env")
     VENV_PATH=""
-    
+
     for dir in "${VENV_DIRS[@]}"; do
         if [ -d "$dir" ]; then
             VENV_PATH="$dir"
             break
         fi
     done
-    
+
     if [ -n "$VENV_PATH" ]; then
         log_info "发现虚拟环境: $VENV_PATH"
         log_info "激活虚拟环境..."
-        
+
         # 激活虚拟环境
         source "$VENV_PATH/bin/activate"
-        
+
         if [[ "$VIRTUAL_ENV" != "" ]]; then
             log_success "虚拟环境激活成功"
             return 0
@@ -108,11 +108,11 @@ setup_virtual_environment() {
         log_warning "未找到虚拟环境"
         read -p "是否创建新的虚拟环境? (y/n): " -n 1 -r
         echo
-        
+
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             log_info "创建虚拟环境..."
             python3 -m venv venv
-            
+
             if [ $? -eq 0 ]; then
                 log_success "虚拟环境创建成功"
                 source venv/bin/activate
@@ -132,12 +132,12 @@ setup_virtual_environment() {
 # 运行环境检测
 run_environment_check() {
     log_header "运行环境检测"
-    
+
     if [ -f "check_dev_env.py" ]; then
         log_info "运行环境检测脚本..."
         python check_dev_env.py
         ENV_CHECK_RESULT=$?
-        
+
         if [ $ENV_CHECK_RESULT -eq 0 ]; then
             log_success "环境检测通过"
             return 0
@@ -154,33 +154,33 @@ run_environment_check() {
 # 安装依赖
 install_dependencies() {
     log_header "依赖安装"
-    
+
     # 检查requirements文件
     REQ_FILES=("requirements.dev.txt" "requirements.txt")
     REQ_FILE=""
-    
+
     for file in "${REQ_FILES[@]}"; do
         if [ -f "$file" ]; then
             REQ_FILE="$file"
             break
         fi
     done
-    
+
     if [ -z "$REQ_FILE" ]; then
         log_warning "未找到requirements文件"
         return 1
     fi
-    
+
     log_info "使用依赖文件: $REQ_FILE"
-    
+
     # 升级pip
     log_info "升级pip..."
     python -m pip install --upgrade pip
-    
+
     # 安装依赖
     log_info "安装依赖包..."
     pip install -r "$REQ_FILE"
-    
+
     if [ $? -eq 0 ]; then
         log_success "依赖安装完成"
         return 0
@@ -203,15 +203,15 @@ check_port() {
 # 启动后端服务
 start_backend() {
     log_header "启动后端服务"
-    
+
     BACKEND_PORT=8000
-    
+
     # 检查端口
     if check_port $BACKEND_PORT; then
         log_warning "端口 $BACKEND_PORT 已被占用"
         read -p "是否终止占用进程并重启? (y/n): " -n 1 -r
         echo
-        
+
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             log_info "终止占用端口 $BACKEND_PORT 的进程..."
             lsof -ti:$BACKEND_PORT | xargs kill -9 2>/dev/null
@@ -221,24 +221,24 @@ start_backend() {
             return 0
         fi
     fi
-    
+
     # 设置环境变量
     export HAIRNET_MODEL_PATH="models/hairnet_detection.pt"
     export HAIRNET_DEVICE="cpu"
     export HAIRNET_CONF_THRES="0.5"
     export HAIRNET_IOU_THRES="0.4"
-    
+
     log_info "启动后端服务..."
     log_info "模型路径: $HAIRNET_MODEL_PATH"
     log_info "设备: $HAIRNET_DEVICE"
-    
+
     # 在后台启动后端
     nohup python src/api/app.py > backend.log 2>&1 &
     BACKEND_PID=$!
-    
+
     # 等待服务启动
     sleep 3
-    
+
     # 检查服务是否启动成功
     if kill -0 $BACKEND_PID 2>/dev/null; then
         log_success "后端服务启动成功 (PID: $BACKEND_PID)"
@@ -255,20 +255,20 @@ start_backend() {
 # 启动前端服务
 start_frontend() {
     log_header "启动前端服务"
-    
+
     FRONTEND_PORT=8080
-    
+
     if [ ! -d "frontend" ]; then
         log_warning "前端目录不存在，跳过前端启动"
         return 0
     fi
-    
+
     # 检查端口
     if check_port $FRONTEND_PORT; then
         log_warning "端口 $FRONTEND_PORT 已被占用"
         read -p "是否终止占用进程并重启? (y/n): " -n 1 -r
         echo
-        
+
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             log_info "终止占用端口 $FRONTEND_PORT 的进程..."
             lsof -ti:$FRONTEND_PORT | xargs kill -9 2>/dev/null
@@ -278,18 +278,18 @@ start_frontend() {
             return 0
         fi
     fi
-    
+
     log_info "启动前端服务..."
-    
+
     # 在后台启动前端
     cd frontend
     nohup python -m http.server $FRONTEND_PORT > ../frontend.log 2>&1 &
     FRONTEND_PID=$!
     cd ..
-    
+
     # 等待服务启动
     sleep 2
-    
+
     # 检查服务是否启动成功
     if kill -0 $FRONTEND_PID 2>/dev/null; then
         log_success "前端服务启动成功 (PID: $FRONTEND_PID)"
@@ -305,10 +305,10 @@ start_frontend() {
 # 显示服务状态
 show_status() {
     log_header "服务状态"
-    
+
     echo "运行中的服务:"
     echo "----------------------------------------"
-    
+
     # 检查后端
     if [ -f "backend.pid" ]; then
         BACKEND_PID=$(cat backend.pid)
@@ -321,7 +321,7 @@ show_status() {
     else
         echo -e "${RED}✗${NC} 后端服务 (未启动)"
     fi
-    
+
     # 检查前端
     if [ -f "frontend.pid" ]; then
         FRONTEND_PID=$(cat frontend.pid)
@@ -334,7 +334,7 @@ show_status() {
     else
         echo -e "${RED}✗${NC} 前端服务 (未启动)"
     fi
-    
+
     echo "----------------------------------------"
     echo
     echo "日志文件:"
@@ -349,7 +349,7 @@ show_status() {
 # 停止服务
 stop_services() {
     log_header "停止服务"
-    
+
     # 停止后端
     if [ -f "backend.pid" ]; then
         BACKEND_PID=$(cat backend.pid)
@@ -365,7 +365,7 @@ stop_services() {
         fi
         rm -f backend.pid
     fi
-    
+
     # 停止前端
     if [ -f "frontend.pid" ]; then
         FRONTEND_PID=$(cat frontend.pid)
@@ -410,82 +410,82 @@ show_help() {
 # 主函数
 main() {
     local action=${1:-start}
-    
+
     case $action in
         "start")
             log_header "开发环境启动"
-            
+
             # 检查Python版本
             if ! check_python_version; then
                 log_error "Python版本检查失败，退出"
                 exit 1
             fi
-            
+
             # 设置虚拟环境
             if ! setup_virtual_environment; then
                 log_error "虚拟环境设置失败，退出"
                 exit 1
             fi
-            
+
             # 运行环境检测
             run_environment_check
             ENV_CHECK_RESULT=$?
-            
+
             # 如果环境检测失败，询问是否安装依赖
             if [ $ENV_CHECK_RESULT -ne 0 ]; then
                 read -p "环境检测发现问题，是否安装缺失的依赖? (y/n): " -n 1 -r
                 echo
-                
+
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     if ! install_dependencies; then
                         log_error "依赖安装失败，退出"
                         exit 1
                     fi
-                    
+
                     # 重新检测环境
                     log_info "重新检测环境..."
                     run_environment_check
                 fi
             fi
-            
+
             # 启动服务
             start_backend
             start_frontend
-            
+
             # 显示状态
             show_status
             ;;
-        
+
         "stop")
             stop_services
             ;;
-        
+
         "restart")
             stop_services
             sleep 2
             $0 start
             ;;
-        
+
         "status")
             show_status
             ;;
-        
+
         "check")
             check_python_version
             setup_virtual_environment
             run_environment_check
             ;;
-        
+
         "install")
             check_python_version
             setup_virtual_environment
             install_dependencies
             ;;
-        
+
         "help")
             show_help
             ;;
-        
+
         *)
             log_error "未知选项: $action"
             show_help

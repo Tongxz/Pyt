@@ -32,7 +32,7 @@ python check_dev_env.py
 项目: 人体行为检测系统
 
 ============================================================
-                        Python版本检查                        
+                        Python版本检查
 ============================================================
 
 [INFO] 当前Python版本: 3.10.13
@@ -40,7 +40,7 @@ python check_dev_env.py
 [SUCCESS] Python版本符合要求
 
 ============================================================
-                         依赖包检查                          
+                         依赖包检查
 ============================================================
 
 [INFO] 检查关键依赖包:
@@ -233,7 +233,7 @@ export HAIRNET_IOU_THRES="0.4"
    ```bash
    # 升级pip
    python -m pip install --upgrade pip
-   
+
    # 分别安装依赖
    pip install torch torchvision
    pip install ultralytics
@@ -245,7 +245,7 @@ export HAIRNET_IOU_THRES="0.4"
    # 查看端口占用
    lsof -i :8000
    lsof -i :8080
-   
+
    # 终止进程
    kill -9 <PID>
    ```
@@ -254,7 +254,7 @@ export HAIRNET_IOU_THRES="0.4"
    ```bash
    # 下载YOLOv8模型
    wget https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.pt
-   
+
    # 或运行训练脚本
    python scripts/train_hairnet_model.py
    ```
@@ -278,10 +278,10 @@ cat dev_env_report.json | python -m json.tool
    ```bash
    # 1. 检测环境
    ./start_dev.sh check
-   
+
    # 2. 安装依赖
    ./start_dev.sh install
-   
+
    # 3. 启动服务
    ./start_dev.sh start
    ```
@@ -290,7 +290,7 @@ cat dev_env_report.json | python -m json.tool
    ```bash
    # 启动开发环境
    ./start_dev.sh
-   
+
    # 开发完成后停止服务
    ./start_dev.sh stop
    ```
@@ -299,10 +299,10 @@ cat dev_env_report.json | python -m json.tool
    ```bash
    # 检查环境状态
    ./start_dev.sh status
-   
+
    # 重新检测环境
    python check_dev_env.py
-   
+
    # 重启服务
    ./start_dev.sh restart
    ```

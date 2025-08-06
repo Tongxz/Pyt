@@ -12,7 +12,9 @@ import sys
 from typing import Any, Dict, Optional, Union
 
 # 添加项目根目录到 Python 路径
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+project_root = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 sys.path.append(project_root)
 
 # 尝试导入 YOLOv8 发网检测器

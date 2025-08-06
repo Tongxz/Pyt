@@ -70,23 +70,23 @@ class HumanDetectionApp {
                 },
                 mode: 'cors'
             });
-            
+
             console.log('API响应状态:', response.status);
             console.log('API响应头:', response.headers);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP错误: ${response.status}`);
             }
-            
+
             const contentType = response.headers.get('content-type');
             console.log('响应内容类型:', contentType);
-            
+
             if (!contentType || !contentType.includes('application/json')) {
                 const text = await response.text();
                 console.error('非JSON响应:', text);
                 throw new Error('服务器返回非JSON格式数据');
             }
-            
+
             const data = await response.json();
             console.log('API响应数据:', data);
 
