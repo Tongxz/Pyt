@@ -232,3 +232,145 @@ class YOLOHairnetDetector:
         self.total_detections = 0
         self.hairnet_detections = 0
         logger.info("统计信息已重置")
+
+    def detect_hairnet_compliance(self, image: Union[str, np.ndarray]) -> Dict[str, Any]:
+        """
+        检测图像中的发网佩戴合规性（与传统检测器API兼容）
+        
+        Args:
+            image: 输入图像
+            
+        Returns:
+            dict: 包含检测结果的字典，格式与传统检测器兼容
+        """
+        try:
+            # 首先进行人体检测以获得准确的人数统计
+            try:
+                from src.core.detector import HumanDetector
+                human_detector = HumanDetector()
+                human_detections = human_detector.detect(image)
+                logger.info(f"人体检测结果: 检测到 {len(human_detections)} 个人")
+            except Exception as e:
+                logger.warning(f"人体检测失败，使用发网检测结果: {e}")
+                human_detections = []
+            
+            # 使用基础detect方法获取发网检测结果
+            result = self.detect(image)
+            
+            if result.get("error"):
+                # 如果检测失败，返回默认结果
+                return {
+                    "total_persons": len(human_detections),
+                    "persons_with_hairnet": 0,
+                    "persons_without_hairnet": len(human_detections),
+                    "compliance_rate": 0.0,
+                    "detections": [],
+                    "average_confidence": 0.0,
+                    "error": result["error"]
+                }
+            
+            # 处理检测结果
+            hairnet_detections = result.get("detections", [])
+            
+            # 统计发网检测结果
+            total_persons = len(human_detections)
+            persons_with_hairnet = 0
+            persons_without_hairnet = 0
+            compliance_detections = []
+            
+            # 如果有人体检测结果，为每个人创建检测记录
+            if human_detections:
+                for i, human_det in enumerate(human_detections):
+                    human_bbox = human_det.get("bbox", [0, 0, 0, 0])
+                    human_confidence = human_det.get("confidence", 0.0)
+                    
+                    # 检查该人是否佩戴发网（通过检查发网检测框是否与人体框重叠）
+                    has_hairnet = False
+                    hairnet_confidence = 0.0
+                    
+                    for hairnet_det in hairnet_detections:
+                        if hairnet_det.get("class", "").lower() == "hairnet":
+                            hairnet_bbox = hairnet_det.get("bbox", [0, 0, 0, 0])
+                            # 简单的重叠检测：如果发网框与人体框有重叠，认为该人佩戴发网
+                            if self._boxes_overlap(human_bbox, hairnet_bbox):
+                                has_hairnet = True
+                                hairnet_confidence = hairnet_det.get("confidence", 0.0)
+                                break
+                    
+                    if has_hairnet:
+                        persons_with_hairnet += 1
+                    else:
+                        persons_without_hairnet += 1
+                    
+                    # 构建兼容格式的检测结果
+                    compliance_detections.append({
+                        "bbox": human_bbox,
+                        "has_hairnet": has_hairnet,
+                        "confidence": human_confidence,
+                        "hairnet_confidence": hairnet_confidence,
+                    })
+            else:
+                # 如果没有人体检测结果，但有发网检测结果，假设每个发网对应一个人
+                for hairnet_det in hairnet_detections:
+                    if hairnet_det.get("class", "").lower() == "hairnet":
+                        total_persons += 1
+                        persons_with_hairnet += 1
+                        
+                        compliance_detections.append({
+                            "bbox": hairnet_det.get("bbox", [0, 0, 0, 0]),
+                            "has_hairnet": True,
+                            "confidence": hairnet_det.get("confidence", 0.0),
+                            "hairnet_confidence": hairnet_det.get("confidence", 0.0),
+                        })
+            
+            # 计算合规率
+            compliance_rate = (persons_with_hairnet / total_persons) if total_persons > 0 else 0.0
+            
+            # 计算平均置信度
+            if compliance_detections:
+                average_confidence = sum(det["confidence"] for det in compliance_detections) / len(compliance_detections)
+            else:
+                average_confidence = 0.0
+            
+            logger.info(f"发网合规性检测结果: 总人数={total_persons}, 佩戴发网={persons_with_hairnet}, 未佩戴={persons_without_hairnet}, 合规率={compliance_rate:.2f}")
+            
+            return {
+                "total_persons": total_persons,
+                "persons_with_hairnet": persons_with_hairnet,
+                "persons_without_hairnet": persons_without_hairnet,
+                "compliance_rate": compliance_rate,
+                "detections": compliance_detections,
+                "average_confidence": average_confidence,
+            }
+            
+        except Exception as e:
+            logger.error(f"发网合规性检测失败: {e}")
+            return {
+                "total_persons": 0,
+                "persons_with_hairnet": 0,
+                "persons_without_hairnet": 0,
+                "compliance_rate": 0.0,
+                "detections": [],
+                "average_confidence": 0.0,
+                "error": str(e)
+            }
+    
+    def _boxes_overlap(self, box1: List[float], box2: List[float]) -> bool:
+        """
+        检查两个边界框是否重叠
+        
+        Args:
+            box1: 第一个边界框 [x1, y1, x2, y2]
+            box2: 第二个边界框 [x1, y1, x2, y2]
+            
+        Returns:
+            bool: 是否重叠
+        """
+        try:
+            x1_1, y1_1, x2_1, y2_1 = box1
+            x1_2, y1_2, x2_2, y2_2 = box2
+            
+            # 检查是否有重叠
+            return not (x2_1 < x1_2 or x2_2 < x1_1 or y2_1 < y1_2 or y2_2 < y1_1)
+        except Exception:
+            return False

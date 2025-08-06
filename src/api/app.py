@@ -266,34 +266,12 @@ manager = ConnectionManager()
 
 # 可视化函数
 def visualize_hairnet_detections(image, detections):
-    """可视化发网检测结果 - 增强版标注"""
+    """可视化发网检测结果 - 统一检测器版本"""
     annotated_image = image.copy()
 
-    # ---------------- 新增：先进行人体检测 ----------------
-    global detector
-    person_detections = []
-    if detector is not None and hasattr(detector, "detect"):
-        try:
-            person_detections = detector.detect(image)
-        except Exception:
-            pass
-
-    # 根据人体检测结果重新统计人数
-    total_persons = len(person_detections)
-
-    # 判断每个人是否佩戴发网：若头部（hairnet_bbox）中心点位于该人体框内则认为佩戴
-    compliant_count = 0
-    for person in person_detections:
-        px1, py1, px2, py2 = person.get("bbox", [0, 0, 0, 0])
-        has_hairnet = False
-        for det in detections:
-            hx1, hy1, hx2, hy2 = det.get("bbox", [0, 0, 0, 0])
-            cx, cy = (hx1 + hx2) / 2, (hy1 + hy2) / 2
-            if px1 <= cx <= px2 and py1 <= cy <= py2:
-                has_hairnet = det.get("has_hairnet", False)
-                break
-        if has_hairnet:
-            compliant_count += 1
+    # 使用传入的detections数据进行统计和可视化
+    total_persons = len(detections)
+    compliant_count = sum(1 for det in detections if det.get("has_hairnet", False))
     compliance_rate = (
         (compliant_count / total_persons * 100) if total_persons > 0 else 0
     )
@@ -325,26 +303,7 @@ def visualize_hairnet_detections(image, detections):
         stats_thickness,
     )
 
-    # ------------- 绘制人体框 -------------
-    for idx, person in enumerate(person_detections, 1):
-        bbox = person.get("bbox", [])
-        if len(bbox) < 4:
-            continue
-        x1, y1, x2, y2 = map(int, bbox[:4])
-        # 人体框使用青色
-        cv2.rectangle(annotated_image, (x1, y1), (x2, y2), (255, 255, 0), 2)
-        # 编号标注
-        cv2.putText(
-            annotated_image,
-            f"P{idx}",
-            (x1, y1 - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
-            (255, 255, 0),
-            2,
-        )
-
-    # ------------- 绘制发网框 -------------
+    # ------------- 绘制检测结果框 -------------
     for d_idx, detection in enumerate(detections, 1):
         bbox = detection.get("bbox", [])
         has_hairnet = detection.get("has_hairnet", False)
@@ -585,8 +544,6 @@ async def startup_event():
             detector.max_box_ratio = float(os.environ.get("HUMAN_MAX_BOX_RATIO", "6.0"))
         except Exception:
             # 回退到 FallbackHumanDetector（无参数可调）
-            from core.detector import FallbackHumanDetector
-
             detector = FallbackHumanDetector()
 
         # 使用发网检测器工厂创建YOLOv8检测器
@@ -773,8 +730,15 @@ async def detect_hairnet(file: UploadFile = File(...)):
             # 使用YOLOv8检测器
             logger.info("使用YOLOv8检测器进行发网检测")
             try:
-                # 确保检测器有detect方法
-                if hasattr(hairnet_pipeline, "detect"):
+                # 优先使用detect_hairnet_compliance方法，如果不存在则使用detect方法
+                if hasattr(hairnet_pipeline, "detect_hairnet_compliance"):
+                    logger.info("使用YOLOv8检测器的detect_hairnet_compliance方法")
+                    results = hairnet_pipeline.detect_hairnet_compliance(image)
+                    
+                    # 获取可视化结果 - 使用自定义可视化函数以显示人体和发网检测框
+                    annotated_image = visualize_hairnet_detections(image, results.get("detections", []))
+                elif hasattr(hairnet_pipeline, "detect"):
+                    logger.info("使用YOLOv8检测器的detect方法")
                     result = hairnet_pipeline.detect(image)
 
                     # 确保结果是字典类型

@@ -11,15 +11,17 @@ import os
 import sys
 from typing import Any, Dict, Optional, Union
 
-# 添加项目根目录到Python路径
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# 添加项目根目录到 Python 路径
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(project_root)
 
 # 尝试导入 YOLOv8 发网检测器
 try:
     from src.core.yolo_hairnet_detector import YOLOHairnetDetector
 
     YOLO_DETECTOR_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print(f"导入YOLOHairnetDetector失败: {e}")
     YOLO_DETECTOR_AVAILABLE = False
 
 logger = logging.getLogger(__name__)

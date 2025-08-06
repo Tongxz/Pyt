@@ -1,7 +1,7 @@
 // 人体行为检测系统前端应用
 class HumanDetectionApp {
     constructor() {
-        this.apiBaseUrl = '';
+        this.apiBaseUrl = 'http://localhost:8000';
         this.websocket = null;
         this.videoStream = null;
         this.isDetecting = false;
@@ -61,8 +61,34 @@ class HumanDetectionApp {
     // 检查API健康状态
     async checkApiHealth() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/health`);
+            console.log('正在检查API健康状态:', `${this.apiBaseUrl}/health`);
+            const response = await fetch(`${this.apiBaseUrl}/health`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                mode: 'cors'
+            });
+            
+            console.log('API响应状态:', response.status);
+            console.log('API响应头:', response.headers);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP错误: ${response.status}`);
+            }
+            
+            const contentType = response.headers.get('content-type');
+            console.log('响应内容类型:', contentType);
+            
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('非JSON响应:', text);
+                throw new Error('服务器返回非JSON格式数据');
+            }
+            
             const data = await response.json();
+            console.log('API响应数据:', data);
 
             if (data.status === 'healthy') {
                 this.showStatus('uploadStatus', '✅ API服务连接正常', 'success');
@@ -71,9 +97,9 @@ class HumanDetectionApp {
                 throw new Error('API服务异常');
             }
         } catch (error) {
-            this.showStatus('uploadStatus', '❌ API服务连接失败', 'error');
+            console.error('API健康检查详细错误:', error);
+            this.showStatus('uploadStatus', `❌ API服务连接失败: ${error.message}`, 'error');
             this.showStatus('realtimeStatus', '❌ 无法连接到检测服务', 'error');
-            console.error('API健康检查失败:', error);
         }
     }
 
