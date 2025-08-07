@@ -18,7 +18,8 @@ import numpy as np
 from fastapi import (
     FastAPI,
     File,
-    HTTPException,
+     Form,
+     HTTPException,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
@@ -1615,7 +1616,7 @@ async def detect_hairnet(file: UploadFile = File(...)):
 
 @app.post("/api/v1/detect/hairnet/video")
 async def detect_hairnet_video(
-    file: UploadFile = File(...), record_process: str = "false"
+    file: UploadFile = File(...), record_process: str = Form("false")
 ):
     """视频发网检测接口
 
@@ -1626,6 +1627,8 @@ async def detect_hairnet_video(
     # 将字符串参数转换为布尔值
     record_process_bool = record_process.lower() == "true"
     logger.info(f"接收到录制参数: {record_process} -> {record_process_bool}")
+    logger.info(f"文件名: {file.filename}, 文件类型: {file.content_type}")
+    logger.info(f"录制模式: {'开启' if record_process_bool else '关闭'}")
     if hairnet_pipeline is None:
         raise HTTPException(status_code=500, detail="发网检测器未初始化")
 
@@ -1659,6 +1662,10 @@ async def detect_hairnet_video(
 
             # 获取视频信息
             fps = cap.get(cv2.CAP_PROP_FPS)
+            # 如果 FPS 获取失败或值异常，使用默认 30 FPS，避免输出视频卡顿
+            if fps is None or fps <= 0 or fps != fps:  # fps != fps 检测 NaN
+                logger.warning(f"检测到无效 FPS ({fps}), 默认使用 30 FPS")
+                fps = 30.0
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             duration = total_frames / fps if fps > 0 else 0
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))

@@ -233,11 +233,24 @@ class HumanDetectionApp {
 
             // 如果是视频检测，添加录制参数
             if (this.currentFileType === 'video') {
-                const recordChecked = this.recordProcessCheckbox.checked;
+                const recordChecked = this.recordProcessCheckbox ? this.recordProcessCheckbox.checked : false;
                 console.log('录制选项状态:', recordChecked);
+                console.log('录制复选框元素:', this.recordProcessCheckbox);
+                console.log('复选框是否存在:', !!this.recordProcessCheckbox);
+                console.log('复选框checked属性:', this.recordProcessCheckbox ? this.recordProcessCheckbox.checked : 'N/A');
+                
                 const recordValue = recordChecked ? 'true' : 'false';
                 formData.append('record_process', recordValue);
                 console.log('已添加录制参数:', recordValue);
+                
+                // 验证FormData中的参数
+                console.log('=== FormData内容检查 ===');
+                for (let [key, value] of formData.entries()) {
+                    console.log('FormData参数:', key, '=', value);
+                }
+                console.log('=== FormData检查结束 ===');
+            } else {
+                console.log('当前文件类型不是video，跳过录制参数');
             }
 
             // 根据文件类型选择不同的API端点
