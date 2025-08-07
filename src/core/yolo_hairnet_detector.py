@@ -234,31 +234,43 @@ class YOLOHairnetDetector:
         logger.info("统计信息已重置")
 
     def detect_hairnet_compliance(
-        self, image: Union[str, np.ndarray]
+        self, image: Union[str, np.ndarray], human_detections: Optional[List[Dict]] = None
     ) -> Dict[str, Any]:
         """
         检测图像中的发网佩戴合规性（与传统检测器API兼容）
 
         Args:
             image: 输入图像
+            human_detections: 可选的人体检测结果，如果提供则不会重复进行人体检测
 
         Returns:
             dict: 包含检测结果的字典，格式与传统检测器兼容
         """
         try:
-            # 首先进行人体检测以获得准确的人数统计
-            try:
-                from src.core.detector import HumanDetector
+            # 如果没有提供人体检测结果，则进行人体检测
+            if human_detections is None:
+                try:
+                    from src.core.detector import HumanDetector
 
-                human_detector = HumanDetector()
-                human_detections = human_detector.detect(image)
-                logger.info(f"人体检测结果: 检测到 {len(human_detections)} 个人")
-            except Exception as e:
-                logger.warning(f"人体检测失败，使用发网检测结果: {e}")
-                human_detections = []
+                    human_detector = HumanDetector()
+                    human_detections = human_detector.detect(image)
+                    logger.info(f"人体检测结果: 检测到 {len(human_detections)} 个人")
+                except Exception as e:
+                    logger.warning(f"人体检测失败，使用发网检测结果: {e}")
+                    human_detections = []
+            else:
+                logger.info(f"使用提供的人体检测结果: 检测到 {len(human_detections)} 个人")
 
+            # 确保图像是numpy数组格式
+            if isinstance(image, str):
+                image_array = cv2.imread(image)
+                if image_array is None:
+                    raise ValueError(f"无法读取图像文件: {image}")
+            else:
+                image_array = image
+            
             # 使用基础detect方法获取发网检测结果
-            result = self.detect(image)
+            result = self.detect(image_array)
 
             if result.get("error"):
                 # 如果检测失败，返回默认结果

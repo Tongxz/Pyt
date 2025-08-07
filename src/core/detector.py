@@ -16,7 +16,7 @@ class HumanDetector:
     基于YOLOv8的人体检测模块，支持实时检测和批量处理
     """
 
-    def __init__(self, model_path: str = "yolov8n.pt", device: str = "auto"):
+    def __init__(self, model_path: str = "yolov8s.pt", device: str = "auto"):
         """
         初始化人体检测器
 
@@ -26,10 +26,10 @@ class HumanDetector:
         """
         self.device = self._get_device(device)
         self.model = self._load_model(model_path)
-        self.confidence_threshold = 0.4  # 提高置信度阈值，减少误检
+        self.confidence_threshold = 0.3  # 提高置信度阈值，减少误检测
         self.iou_threshold = 0.5  # 提高IoU阈值，更严格的重叠抑制
-        self.min_box_area = 1200  # 提高最小检测框面积，过滤小目标
-        self.max_box_ratio = 4.5  # 降低最大宽高比，过滤异常形状
+        self.min_box_area = 800   # 提高最小检测框面积，过滤小目标
+        self.max_box_ratio = 6.0  # 放宽最大宽高比限制
 
         logger.info(f"HumanDetector initialized on {self.device}")
 
@@ -43,7 +43,9 @@ class HumanDetector:
         """加载YOLO模型"""
         try:
             model = YOLO(model_path)
-            model.to(self.device)
+            # 在测试环境中使用的 DummyYOLO 可能不实现 .to 方法，这里做兼容处理
+            if hasattr(model, "to"):
+                model.to(self.device)
             logger.info(f"成功加载模型: {model_path} 到设备: {self.device}")
             return model
         except Exception as e:
@@ -104,9 +106,9 @@ class HumanDetector:
                             if (
                                 area >= self.min_box_area
                                 and aspect_ratio <= self.max_box_ratio
-                                and width > 40
-                                and height > 80
-                            ):  # 提高人体最小尺寸要求，减少误检
+                                and width > 20
+                                and height > 40
+                            ):  # 降低人体最小尺寸要求，避免过度过滤
                                 detection = {
                                     "bbox": [int(x1), int(y1), int(x2), int(y2)],
                                     "confidence": confidence,

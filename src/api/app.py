@@ -18,8 +18,8 @@ import numpy as np
 from fastapi import (
     FastAPI,
     File,
-     Form,
-     HTTPException,
+    Form,
+    HTTPException,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
@@ -38,6 +38,99 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+# 统一文件处理函数
+async def process_uploaded_file(file: UploadFile, detection_func, detection_type: str = "detection"):
+    """
+    统一处理上传的图片或视频文件
+    
+    Args:
+        file: 上传的文件
+        detection_func: 检测函数，接收单帧图像并返回检测结果
+        detection_type: 检测类型，用于日志记录
+    
+    Returns:
+        检测结果字典
+    """
+    contents = await file.read()
+    
+    # 检查文件类型
+    file_extension = file.filename.lower().split('.')[-1] if file.filename else ''
+    
+    if file_extension in ['jpg', 'jpeg', 'png', 'bmp', 'tiff']:
+        # 处理图像文件
+        logger.info(f"处理图像文件: {file.filename}, 文件大小: {len(contents)} bytes")
+        
+        nparr = np.frombuffer(contents, np.uint8)
+        logger.info(f"numpy数组大小: {nparr.shape}")
+        
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if image is None:
+            logger.error("cv2.imdecode返回None，图像解码失败")
+            raise HTTPException(status_code=400, detail="无效的图像格式")
+        
+        logger.info(f"图像解码成功，尺寸: {image.shape}")
+        
+        # 执行检测
+        results = detection_func(image)
+        return {
+            "file_type": "image",
+            "results": results
+        }
+        
+    elif file_extension in ['mp4', 'avi', 'mov', 'mkv', 'flv', 'wmv']:
+        # 处理视频文件
+        import tempfile
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_extension}') as temp_file:
+            temp_file.write(contents)
+            temp_file_path = temp_file.name
+        
+        try:
+            cap = cv2.VideoCapture(temp_file_path)
+            if not cap.isOpened():
+                raise HTTPException(status_code=400, detail="无法打开视频文件")
+            
+            all_results = []
+            frame_count = 0
+            
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                
+                # 每5帧处理一次以提高性能
+                if frame_count % 5 == 0:
+                    frame_results = detection_func(frame)
+                    if isinstance(frame_results, list):
+                        for result in frame_results:
+                            if isinstance(result, dict):
+                                result["frame"] = frame_count
+                        all_results.extend(frame_results)
+                    elif isinstance(frame_results, dict):
+                        frame_results["frame"] = frame_count
+                        all_results.append(frame_results)
+                
+                frame_count += 1
+            
+            cap.release()
+            
+            return {
+                "file_type": "video",
+                "total_frames": frame_count,
+                "processed_frames": frame_count // 5,
+                "results": all_results
+            }
+            
+        finally:
+            os.unlink(temp_file_path)
+    
+    else:
+        raise HTTPException(
+            status_code=400, 
+            detail="不支持的文件格式，请上传图像文件(jpg, png等)或视频文件(mp4, avi等)"
+        )
 
 
 # 定义备用类
@@ -183,6 +276,7 @@ try:
         Violation,
         ViolationSeverity,
     )
+    from core.behavior import BehaviorRecognizer
 
     logger.info("成功导入核心模块")
 except ImportError as e:
@@ -198,6 +292,7 @@ except ImportError as e:
     ViolationSeverity = None
     RuleCondition = None
     Violation = None
+    BehaviorRecognizer = None  # 确保变量已定义，避免后续引用报错
 
 # 备用检测管道已在前面定义，无需额外操作
 
@@ -212,7 +307,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -249,6 +344,11 @@ data_manager = None
 region_manager = None
 rule_engine = None
 region_metadata = {}  # 存储区域的额外元数据 (description, color)
+# 行为识别器
+behavior_recognizer = None
+# 优化检测管道
+optimized_pipeline = None
+video_optimizer = None
 
 
 # WebSocket连接管理（如果没有导入成功，使用内置版本）
@@ -982,7 +1082,7 @@ def add_video_annotations(frame, detection_results, frame_number, fps):
 @app.on_event("startup")
 async def startup_event():
     """应用启动时初始化检测器"""
-    global detector, hairnet_pipeline, data_manager, region_manager, rule_engine
+    global detector, hairnet_pipeline, data_manager, region_manager, rule_engine, behavior_recognizer, optimized_pipeline, video_optimizer
     try:
         # 优先尝试初始化 HumanDetector，若失败则回退到 FallbackHumanDetector
         try:
@@ -994,7 +1094,7 @@ async def startup_event():
             )
             # 仅对 HumanDetector 实例设置参数
             detector.confidence_threshold = float(
-                os.environ.get("HUMAN_CONF_THRES", "0.2")
+                os.environ.get("HUMAN_CONF_THRES", "0.1")
             )
             detector.min_box_area = int(os.environ.get("HUMAN_MIN_BOX_AREA", "600"))
             detector.max_box_ratio = float(os.environ.get("HUMAN_MAX_BOX_RATIO", "6.0"))
@@ -1067,10 +1167,46 @@ async def startup_event():
                 if os.path.exists(config_path):
                     rule_engine.load_rules_config(config_path)
                 logger.info("规则引擎初始化成功")
+
+            # 初始化行为识别器
+            if BehaviorRecognizer is not None:
+                try:
+                    behavior_recognizer = BehaviorRecognizer(confidence_threshold=float(os.environ.get("BEHAVIOR_CONF_THRES", "0.6")))
+                    logger.info("行为识别器初始化成功")
+                except Exception as e:
+                    logger.error(f"行为识别器初始化失败: {e}")
             else:
-                logger.warning("RuleEngine 不可用，跳过初始化")
+                logger.warning("BehaviorRecognizer 未导入，跳过初始化")
         except Exception as e:
             logger.error(f"区域管理器或规则引擎初始化失败: {e}")
+        
+        # 初始化优化检测管道
+        try:
+            from core.optimized_detection_pipeline import OptimizedDetectionPipeline, VideoStreamOptimizer
+            
+            # 创建优化检测管道
+            optimized_pipeline = OptimizedDetectionPipeline(
+                human_detector=detector,
+                hairnet_detector=hairnet_pipeline,
+                behavior_recognizer=behavior_recognizer,
+                enable_cache=True,
+                cache_size=int(os.environ.get("CACHE_SIZE", "100")),
+                cache_ttl=float(os.environ.get("CACHE_TTL", "30.0"))
+            )
+            
+            # 创建视频流优化器
+            video_optimizer = VideoStreamOptimizer(
+                detection_pipeline=optimized_pipeline,
+                frame_skip=int(os.environ.get("FRAME_SKIP", "3")),
+                similarity_threshold=float(os.environ.get("SIMILARITY_THRESHOLD", "0.95"))
+            )
+            
+            logger.info("优化检测管道初始化成功")
+        except Exception as e:
+            logger.error(f"优化检测管道初始化失败: {e}")
+            # 如果优化管道初始化失败，继续使用原有的检测器
+            optimized_pipeline = None
+            video_optimizer = None
 
     except Exception as e:
         logger.error(f"检测器初始化失败: {e}")
@@ -1109,13 +1245,15 @@ async def get_api_info():
         "name": "人体行为检测系统 API",
         "version": "1.0.0",
         "description": "基于深度学习的实时人体行为检测与分析系统",
-        "endpoints": {
-            "health": "/health",
-            "detect_image": "/api/v1/detect/image",
-            "detect_hairnet": "/api/v1/detect/hairnet",
-            "statistics": "/api/v1/statistics",
-            "websocket": "/ws",
-        },
+        "endpoints": [
+            "/health",
+            "/api/v1/detect/image",
+            "/api/v1/detect/hairnet",
+            "/api/v1/detect/handwash",
+            "/api/v1/detect/sanitize",
+            "/api/v1/statistics",
+            "/ws"
+        ],
     }
 
     # 添加检测器信息
@@ -1144,23 +1282,17 @@ async def get_api_info():
 # 图像检测API
 @app.post("/api/v1/detect/image")
 async def detect_image(file: UploadFile = File(...)):
-    """图像检测接口"""
+    """图像检测接口 - 支持图像和视频文件"""
     if detector is None:
         raise HTTPException(status_code=500, detail="检测器未初始化")
 
-    try:
-        # 读取上传的图像
-        contents = await file.read()
-        nparr = np.frombuffer(contents, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        if image is None:
-            raise HTTPException(status_code=400, detail="无效的图像格式")
-
-        # 执行检测
+    def image_detection_func(image):
+        """图像检测函数"""
         import time
-
+        
         start_time = time.time()
+        if detector is None:
+            raise HTTPException(status_code=500, detail="检测器未初始化")
         results = detector.detect(image)
         processing_time = time.time() - start_time
 
@@ -1186,6 +1318,24 @@ async def detect_image(file: UploadFile = File(...)):
             "annotated_image": img_base64,
         }
 
+    try:
+        # 使用统一文件处理函数
+        processed_result = await process_uploaded_file(file, image_detection_func, "image")
+        
+        if processed_result["file_type"] == "image":
+            return processed_result["results"]
+        else:  # video
+            all_results = processed_result["results"]
+            total_detections = sum(len(r.get("detections", [])) for r in all_results if isinstance(r, dict))
+            
+            return {
+                "success": True,
+                "total_frames": processed_result["total_frames"],
+                "processed_frames": processed_result["processed_frames"],
+                "total_detections": total_detections,
+                "frame_results": all_results
+            }
+
     except Exception as e:
         logger.error(f"图像检测失败: {e}")
         raise HTTPException(status_code=500, detail=f"检测失败: {str(e)}")
@@ -1193,23 +1343,18 @@ async def detect_image(file: UploadFile = File(...)):
 
 @app.post("/api/v1/detect/region")
 async def detect_with_region_analysis(file: UploadFile = File(...)):
-    """带区域分析的图像检测接口（包含人体检测和发网检测）"""
+    """带区域分析的检测接口（包含人体检测和发网检测）- 支持图像和视频文件"""
     if detector is None:
         raise HTTPException(status_code=500, detail="检测器未初始化")
 
-    try:
-        # 读取上传的图像
-        contents = await file.read()
-        nparr = np.frombuffer(contents, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        if image is None:
-            raise HTTPException(status_code=400, detail="无效的图像格式")
-
+    def region_detection_func(image):
+        """区域检测处理函数"""
         # 执行人体检测
         import time
 
         start_time = time.time()
+        if detector is None:
+            raise HTTPException(status_code=500, detail="检测器未初始化")
         detections = detector.detect(image)
         detection_time = time.time() - start_time
 
@@ -1314,7 +1459,6 @@ async def detect_with_region_analysis(file: UploadFile = File(...)):
         )
 
         return {
-            "success": True,
             "detections": detections,
             "hairnet_results": hairnet_results,
             "detection_count": len(detections),
@@ -1331,27 +1475,229 @@ async def detect_with_region_analysis(file: UploadFile = File(...)):
             "region_analysis": region_analysis,
         }
 
+    try:
+        result = await process_uploaded_file(file, region_detection_func, "region_detection")
+        
+        if result["file_type"] == "image":
+            return {
+                "success": True,
+                "file_type": "image",
+                **result["results"]
+            }
+        else:  # video
+            # 计算视频整体统计
+            total_detections = sum(frame["detection_count"] for frame in result["results"])
+            total_persons = sum(frame["total_persons"] for frame in result["results"])
+            total_persons_with_hairnet = sum(frame["persons_with_hairnet"] for frame in result["results"])
+            avg_compliance_rate = sum(frame["compliance_rate"] for frame in result["results"]) / len(result["results"]) if result["results"] else 0
+            
+            return {
+                "success": True,
+                "file_type": "video",
+                "total_frames": result["total_frames"],
+                "processed_frames": len(result["results"]),
+                "total_detections": total_detections,
+                "total_persons": total_persons,
+                "total_persons_with_hairnet": total_persons_with_hairnet,
+                "average_compliance_rate": round(avg_compliance_rate, 3),
+                "frames": result["results"]
+            }
+
     except Exception as e:
         logger.error(f"区域检测失败: {e}")
         raise HTTPException(status_code=500, detail=f"检测失败: {str(e)}")
 
 
+# 洗手检测API
+@app.post("/api/v1/detect/handwash")
+async def detect_handwash(file: UploadFile = File(...)):
+    """洗手行为检测接口 - 支持图像和视频文件"""
+    if detector is None or behavior_recognizer is None:
+        raise HTTPException(status_code=500, detail="检测器或行为识别器未初始化")
+
+    try:
+        contents = await file.read()
+        
+        # 检查文件类型
+        file_extension = file.filename.lower().split('.')[-1] if file.filename else ''
+        
+        if file_extension in ['jpg', 'jpeg', 'png', 'bmp', 'tiff']:
+            # 处理图像文件
+            nparr = np.frombuffer(contents, np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if image is None:
+                raise HTTPException(status_code=400, detail="无效的图像格式")
+            
+            # 人体检测
+            person_detections = detector.detect(image)
+            
+            results = []
+            for idx, det in enumerate(person_detections):
+                bbox = det.get("bbox", [0, 0, 0, 0])
+                # 简单估计双手区域: 取 bbox 下半部分左右各一个小框
+                x1, y1, x2, y2 = bbox
+                width = x2 - x1
+                height = y2 - y1
+                hand_box_h = int(0.15 * height)
+                hand_box_w = int(0.25 * width)
+                left_hand_bbox = [x1, y1 + int(0.55 * height), x1 + hand_box_w, y1 + int(0.55 * height) + hand_box_h]
+                right_hand_bbox = [x2 - hand_box_w, y1 + int(0.55 * height), x2, y1 + int(0.55 * height) + hand_box_h]
+                hand_regions = [{"bbox": left_hand_bbox}, {"bbox": right_hand_bbox}]
+                
+                conf = behavior_recognizer.detect_handwashing(bbox, hand_regions)
+                results.append({
+                    "person_id": idx + 1,
+                    "bbox": bbox,
+                    "handwashing_confidence": round(conf, 3),
+                    "is_handwashing": conf > behavior_recognizer.confidence_threshold
+                })
+            
+            return {"detection_count": len(results), "results": results}
+            
+        elif file_extension in ['mp4', 'avi', 'mov', 'mkv', 'flv', 'wmv']:
+            # 处理视频文件
+            import tempfile
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_extension}') as temp_file:
+                temp_file.write(contents)
+                temp_file_path = temp_file.name
+            
+            try:
+                cap = cv2.VideoCapture(temp_file_path)
+                if not cap.isOpened():
+                    raise HTTPException(status_code=400, detail="无法打开视频文件")
+                
+                all_results = []
+                frame_count = 0
+                
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    
+                    # 每5帧处理一次以提高性能
+                    if frame_count % 5 == 0:
+                        person_detections = detector.detect(frame)
+                        
+                        for idx, det in enumerate(person_detections):
+                            bbox = det.get("bbox", [0, 0, 0, 0])
+                            x1, y1, x2, y2 = bbox
+                            width = x2 - x1
+                            height = y2 - y1
+                            hand_box_h = int(0.15 * height)
+                            hand_box_w = int(0.25 * width)
+                            left_hand_bbox = [x1, y1 + int(0.55 * height), x1 + hand_box_w, y1 + int(0.55 * height) + hand_box_h]
+                            right_hand_bbox = [x2 - hand_box_w, y1 + int(0.55 * height), x2, y1 + int(0.55 * height) + hand_box_h]
+                            hand_regions = [{"bbox": left_hand_bbox}, {"bbox": right_hand_bbox}]
+                            
+                            conf = behavior_recognizer.detect_handwashing(bbox, hand_regions)
+                            all_results.append({
+                                "frame": frame_count,
+                                "person_id": idx + 1,
+                                "bbox": bbox,
+                                "handwashing_confidence": round(conf, 3),
+                                "is_handwashing": conf > behavior_recognizer.confidence_threshold
+                            })
+                    
+                    frame_count += 1
+                
+                cap.release()
+                
+                # 统计结果
+                handwashing_detections = [r for r in all_results if r["is_handwashing"]]
+                
+                return {
+                    "detection_count": len(handwashing_detections),
+                    "total_frames": frame_count,
+                    "processed_frames": len([r for r in all_results]),
+                    "results": all_results
+                }
+                
+            finally:
+                os.unlink(temp_file_path)
+        
+        else:
+            raise HTTPException(status_code=400, detail="不支持的文件格式，请上传图像文件(jpg, png等)或视频文件(mp4, avi等)")
+
+    except Exception as e:
+        logger.error(f"洗手检测失败: {e}")
+        raise HTTPException(status_code=500, detail=f"检测失败: {str(e)}")
+
+# 手部消毒检测API
+@app.post("/api/v1/detect/sanitize")
+async def detect_sanitize(file: UploadFile = File(...)):
+    """手部消毒检测接口 - 支持图像和视频文件"""
+    if detector is None or behavior_recognizer is None:
+        raise HTTPException(status_code=500, detail="检测器或行为识别器未初始化")
+
+    def sanitize_detection_func(image):
+        """消毒检测函数"""
+        # 人体检测
+        if detector is None:
+            return []
+        person_detections = detector.detect(image)
+        
+        results = []
+        for idx, det in enumerate(person_detections):
+            bbox = det.get("bbox", [0, 0, 0, 0])
+            x1, y1, x2, y2 = bbox
+            width = x2 - x1
+            height = y2 - y1
+            hand_box_h = int(0.15 * height)
+            hand_box_w = int(0.25 * width)
+            left_hand_bbox = [x1, y1 + int(0.55 * height), x1 + hand_box_w, y1 + int(0.55 * height) + hand_box_h]
+            right_hand_bbox = [x2 - hand_box_w, y1 + int(0.55 * height), x2, y1 + int(0.55 * height) + hand_box_h]
+            hand_regions = [{"bbox": left_hand_bbox}, {"bbox": right_hand_bbox}]
+            
+            if behavior_recognizer is not None:
+                conf = behavior_recognizer.detect_sanitizing(bbox, hand_regions)
+                results.append({
+                    "person_id": idx + 1,
+                    "bbox": bbox,
+                    "sanitizing_confidence": round(conf, 3),
+                    "is_sanitizing": conf > behavior_recognizer.confidence_threshold
+                })
+            else:
+                results.append({
+                    "person_id": idx + 1,
+                    "bbox": bbox,
+                    "sanitizing_confidence": 0.0,
+                    "is_sanitizing": False
+                })
+        
+        return results
+
+    try:
+        # 使用统一文件处理函数
+        processed_result = await process_uploaded_file(file, sanitize_detection_func, "sanitize")
+        
+        if processed_result["file_type"] == "image":
+            results = processed_result["results"]
+            return {"detection_count": len(results), "results": results}
+        else:  # video
+            all_results = processed_result["results"]
+            sanitizing_detections = [r for r in all_results if r.get("is_sanitizing", False)]
+            
+            return {
+                "detection_count": len(sanitizing_detections),
+                "total_frames": processed_result["total_frames"],
+                "processed_frames": processed_result["processed_frames"],
+                "results": all_results
+            }
+
+    except Exception as e:
+        logger.error(f"手部消毒检测失败: {e}")
+        raise HTTPException(status_code=500, detail=f"检测失败: {str(e)}")
+
 # 发网检测API
 @app.post("/api/v1/detect/hairnet")
 async def detect_hairnet(file: UploadFile = File(...)):
-    """发网检测接口"""
+    """发网检测接口 - 支持图像和视频文件"""
     if hairnet_pipeline is None:
         raise HTTPException(status_code=500, detail="发网检测器未初始化")
 
-    try:
-        # 读取上传的图像
-        contents = await file.read()
-        nparr = np.frombuffer(contents, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        if image is None:
-            raise HTTPException(status_code=400, detail="无效的图像格式")
-
+    def hairnet_detection_func(image):
+        """发网检测函数"""
         # 执行发网检测 - 根据检测器类型调用不同的方法
         results = {}
         annotated_image = None
@@ -1360,7 +1706,7 @@ async def detect_hairnet(file: UploadFile = File(...)):
             logger.info("使用YOLOv8检测器进行发网检测")
             try:
                 # 优先使用detect_hairnet_compliance方法，如果不存在则使用detect方法
-                if hasattr(hairnet_pipeline, "detect_hairnet_compliance"):
+                if hairnet_pipeline is not None and hasattr(hairnet_pipeline, "detect_hairnet_compliance"):
                     logger.info("使用YOLOv8检测器的detect_hairnet_compliance方法")
                     results = hairnet_pipeline.detect_hairnet_compliance(image)
 
@@ -1368,7 +1714,7 @@ async def detect_hairnet(file: UploadFile = File(...)):
                     annotated_image = visualize_hairnet_detections(
                         image, results.get("detections", [])
                     )
-                elif hasattr(hairnet_pipeline, "detect"):
+                elif hairnet_pipeline is not None and hasattr(hairnet_pipeline, "detect"):
                     logger.info("使用YOLOv8检测器的detect方法")
                     result = hairnet_pipeline.detect(image)
 
@@ -1482,9 +1828,9 @@ async def detect_hairnet(file: UploadFile = File(...)):
             logger.info("使用传统检测管道进行发网检测")
             try:
                 # 确保检测管道有detect_hairnet_compliance方法或detect_hairnet方法
-                if hasattr(hairnet_pipeline, "detect_hairnet_compliance"):
+                if hairnet_pipeline is not None and hasattr(hairnet_pipeline, "detect_hairnet_compliance"):
                     results = hairnet_pipeline.detect_hairnet_compliance(image)
-                elif hasattr(hairnet_pipeline, "detect_hairnet"):
+                elif hairnet_pipeline is not None and hasattr(hairnet_pipeline, "detect_hairnet"):
                     # 使用detect_hairnet方法并转换结果格式
                     result = hairnet_pipeline.detect_hairnet(image)
                     # 构建与detect_hairnet_compliance兼容的结果格式
@@ -1608,6 +1954,37 @@ async def detect_hairnet(file: UploadFile = File(...)):
             "frame_id": frame_id,
             "annotated_image": annotated_image_base64,
         }
+
+    try:
+        # 使用统一文件处理函数
+        processed_result = await process_uploaded_file(file, hairnet_detection_func, "hairnet")
+        
+        if processed_result["file_type"] == "image":
+            return processed_result["results"]
+        else:  # video
+            # 对于视频，返回所有帧的检测结果
+            all_results = processed_result["results"]
+            
+            # 统计有发网的检测数量
+            hairnet_detections = 0
+            total_detections = 0
+            
+            for frame_result in all_results:
+                if isinstance(frame_result, dict) and "detections" in frame_result:
+                    detections = frame_result["detections"]
+                    if isinstance(detections, dict):
+                        total_detections += detections.get("total_persons", 0)
+                        hairnet_detections += detections.get("persons_with_hairnet", 0)
+            
+            return {
+                "success": True,
+                "total_frames": processed_result["total_frames"],
+                "processed_frames": processed_result["processed_frames"],
+                "total_detections": total_detections,
+                "hairnet_detections": hairnet_detections,
+                "compliance_rate": hairnet_detections / max(total_detections, 1),
+                "frame_results": all_results
+            }
 
     except Exception as e:
         logger.error(f"发网检测失败: {e}")
@@ -2631,6 +3008,327 @@ async def resolve_violation(violation_id: str):
     except Exception as e:
         logger.error(f"解决违规失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# 统一综合检测API（优化版本）
+@app.post("/api/v1/detect/comprehensive")
+async def detect_comprehensive(file: UploadFile = File(...), record_process: str = Form("false")):
+    """统一综合检测接口 - 同时进行人体检测、发网检测和洗手检测 - 支持图像和视频文件（优化版本）"""
+    # 优先使用优化管道，如果不可用则回退到原有检测器
+    if optimized_pipeline is not None:
+        return await detect_comprehensive_optimized(file, record_process)
+    elif detector is None:
+        raise HTTPException(status_code=500, detail="检测器未初始化")
+    else:
+        return await detect_comprehensive_legacy(file, record_process)
+
+
+# 优化版本的综合检测
+async def detect_comprehensive_optimized(file: UploadFile, record_process: str = "false"):
+    """使用优化管道的综合检测"""
+    def optimized_detection_func(image):
+        """优化的检测处理函数"""
+        import time
+        start_time = time.time()
+        
+        logger.info(f"使用优化管道处理图像，尺寸: {image.shape}")
+        
+        # 使用优化检测管道
+        if optimized_pipeline is not None:
+            result = optimized_pipeline.detect_comprehensive(
+                image,
+                enable_hairnet=True,
+                enable_handwash=True,
+                enable_sanitize=True
+            )
+        else:
+            # 回退到原有检测逻辑
+            from core.optimized_detection_pipeline import DetectionResult
+            result = DetectionResult(
+                person_detections=[],
+                hairnet_results=[],
+                handwash_results=[],
+                sanitize_results=[],
+                processing_times={"total": 0.0}
+            )
+        
+        # 转换为API响应格式
+        total_persons = len(result.person_detections) if result.person_detections else 0
+        
+        # 发网检测结果处理
+        persons_with_hairnet = 0
+        if result.hairnet_results:
+            persons_with_hairnet = sum(1 for hr in result.hairnet_results if hr.get("has_hairnet", False) or hr.get("wearing_hairnet", False))
+        
+        persons_without_hairnet = total_persons - persons_with_hairnet
+        
+        # 行为检测结果处理
+        persons_handwashing = 0
+        if result.handwash_results:
+            persons_handwashing = sum(1 for hw in result.handwash_results if hw.get("is_handwashing", False) or hw.get("handwashing", False))
+        
+        persons_sanitizing = 0
+        if result.sanitize_results:
+            persons_sanitizing = sum(1 for s in result.sanitize_results if s.get("is_sanitizing", False) or s.get("sanitizing", False))
+        
+        # 调试信息
+        logger.info(f"API结果处理: 总人数={total_persons}, 发网={persons_with_hairnet}, 洗手={persons_handwashing}, 消毒={persons_sanitizing}")
+        logger.info(f"原始检测结果: person_detections={len(result.person_detections) if result.person_detections else 0}, hairnet_results={len(result.hairnet_results) if result.hairnet_results else 0}")
+        
+        # 计算合规率
+        hairnet_compliance_rate = persons_with_hairnet / total_persons if total_persons > 0 else 0
+        handwash_rate = persons_handwashing / total_persons if total_persons > 0 else 0
+        sanitize_rate = persons_sanitizing / total_persons if total_persons > 0 else 0
+        
+        # 编码结果图像
+        annotated_image_b64 = None
+        if result.annotated_image is not None:
+            _, buffer = cv2.imencode('.jpg', result.annotated_image)
+            annotated_image_b64 = base64.b64encode(buffer.tobytes()).decode('utf-8')
+        
+        return {
+            "total_persons": total_persons,
+            "statistics": {
+                "persons_with_hairnet": persons_with_hairnet,
+                "persons_without_hairnet": persons_without_hairnet,
+                "persons_handwashing": persons_handwashing,
+                "persons_sanitizing": persons_sanitizing,
+                "hairnet_compliance_rate": round(hairnet_compliance_rate, 2),
+                "handwash_rate": round(handwash_rate, 2),
+                "sanitize_rate": round(sanitize_rate, 2)
+            },
+            "processing_time": {
+                "detection_time": round(result.processing_times.get("person_detection", 0), 3),
+                "hairnet_time": round(result.processing_times.get("hairnet_detection", 0), 3),
+                "handwash_time": round(result.processing_times.get("behavior_detection", 0), 3),
+                "total_time": round(result.processing_times.get("total", 0), 3)
+            },
+            "annotated_image": annotated_image_b64,
+            "optimization_stats": {
+                 "cache_enabled": getattr(optimized_pipeline, 'enable_cache', False) if optimized_pipeline else False,
+                 "cache_hit_rate": optimized_pipeline.get_statistics().get("cache_hit_rate", 0) if optimized_pipeline else 0,
+                 "cache_size": optimized_pipeline.get_statistics().get("cache_stats", {}).get("current_size", 0) if optimized_pipeline else 0,
+                 "total_detections": optimized_pipeline.get_statistics().get("total_detections", 0) if optimized_pipeline else 0,
+                 "cache_hits": optimized_pipeline.get_statistics().get("cache_hits", 0) if optimized_pipeline else 0,
+                 "cache_misses": optimized_pipeline.get_statistics().get("cache_misses", 0) if optimized_pipeline else 0
+             }
+        }
+    
+    return await process_uploaded_file(file, optimized_detection_func, "comprehensive_optimized")
+
+
+# 原有版本的综合检测（作为备用）
+async def detect_comprehensive_legacy(file: UploadFile, record_process: str = "false"):
+    """原有的综合检测实现（备用）"""
+
+    def comprehensive_detection_func(image):
+        """综合检测处理函数"""
+        import time
+        
+        # 添加图像尺寸检查和调试信息
+        logger.info(f"接收到图像尺寸: {image.shape}")
+        
+        # 检查图像是否有效
+        if image is None or image.size == 0:
+            raise HTTPException(status_code=400, detail="图像数据无效")
+        
+        # 检查图像尺寸是否合理
+        height, width = image.shape[:2]
+        if height < 50 or width < 50:
+            logger.warning(f"图像尺寸过小: {width}x{height}，可能导致检测失败")
+        
+        start_time = time.time()
+        
+        # 1. 人体检测
+        if detector is None:
+            raise HTTPException(status_code=500, detail="检测器未初始化")
+        
+        logger.info(f"开始人体检测，图像尺寸: {width}x{height}")
+        person_detections = detector.detect(image)
+        logger.info(f"人体检测完成，检测到 {len(person_detections)} 个目标")
+        detection_time = time.time() - start_time
+        
+        # 2. 发网检测
+        hairnet_start = time.time()
+        hairnet_results = []
+        if hairnet_pipeline is not None:
+            try:
+                for i, detection in enumerate(person_detections):
+                    bbox = detection.get("bbox", [0, 0, 0, 0])
+                    x1, y1, x2, y2 = map(int, bbox)
+                    
+                    # 提取头部区域
+                    head_height = int((y2 - y1) * 0.3)
+                    head_y1 = max(0, y1)
+                    head_y2 = min(image.shape[0], y1 + head_height)
+                    head_x1 = max(0, x1)
+                    head_x2 = min(image.shape[1], x2)
+                    
+                    if head_y2 > head_y1 and head_x2 > head_x1:
+                        head_region = image[head_y1:head_y2, head_x1:head_x2]
+                        hairnet_result = hairnet_pipeline.detect_hairnet_compliance(head_region)
+                        
+                        hairnet_results.append({
+                            "person_id": i + 1,
+                            "person_bbox": bbox,
+                            "head_bbox": [head_x1, head_y1, head_x2, head_y2],
+                            "has_hairnet": hairnet_result.get("wearing_hairnet", False),
+                            "hairnet_confidence": hairnet_result.get("confidence", 0.0),
+                            "hairnet_bbox": hairnet_result.get("head_roi_coords", [head_x1, head_y1, head_x2, head_y2])
+                        })
+            except Exception as e:
+                logger.error(f"发网检测失败: {e}")
+        
+        hairnet_time = time.time() - hairnet_start
+        
+        # 3. 洗手检测
+        handwash_start = time.time()
+        handwash_results = []
+        if behavior_recognizer is not None:
+            try:
+                for idx, det in enumerate(person_detections):
+                    bbox = det.get("bbox", [0, 0, 0, 0])
+                    x1, y1, x2, y2 = bbox
+                    width = x2 - x1
+                    height = y2 - y1
+                    hand_box_h = int(0.15 * height)
+                    hand_box_w = int(0.25 * width)
+                    
+                    left_hand_bbox = [x1, y1 + int(0.55 * height), x1 + hand_box_w, y1 + int(0.55 * height) + hand_box_h]
+                    right_hand_bbox = [x2 - hand_box_w, y1 + int(0.55 * height), x2, y1 + int(0.55 * height) + hand_box_h]
+                    hand_regions = [{"bbox": left_hand_bbox}, {"bbox": right_hand_bbox}]
+                    
+                    handwash_conf = behavior_recognizer.detect_handwashing(bbox, hand_regions)
+                    sanitize_conf = behavior_recognizer.detect_sanitizing(bbox, hand_regions)
+                    
+                    handwash_results.append({
+                        "person_id": idx + 1,
+                        "person_bbox": bbox,
+                        "left_hand_bbox": left_hand_bbox,
+                        "right_hand_bbox": right_hand_bbox,
+                        "handwashing_confidence": round(handwash_conf, 3),
+                        "is_handwashing": handwash_conf > behavior_recognizer.confidence_threshold,
+                        "sanitizing_confidence": round(sanitize_conf, 3),
+                        "is_sanitizing": sanitize_conf > behavior_recognizer.confidence_threshold
+                    })
+            except Exception as e:
+                logger.error(f"洗手检测失败: {e}")
+        
+        handwash_time = time.time() - handwash_start
+        
+        # 4. 生成综合可视化结果
+        annotated_image = image.copy()
+        
+        # 绘制人体检测框
+        for detection in person_detections:
+            bbox = detection.get("bbox", [0, 0, 0, 0])
+            x1, y1, x2, y2 = map(int, bbox)
+            cv2.rectangle(annotated_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(annotated_image, "Person", (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        
+        # 绘制发网检测框
+        for hairnet_result in hairnet_results:
+            head_bbox = hairnet_result["head_bbox"]
+            x1, y1, x2, y2 = map(int, head_bbox)
+            color = (0, 255, 0) if hairnet_result["has_hairnet"] else (0, 0, 255)
+            cv2.rectangle(annotated_image, (x1, y1), (x2, y2), color, 2)
+            label = f"Hairnet: {hairnet_result['hairnet_confidence']:.2f}"
+            cv2.putText(annotated_image, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+        
+        # 绘制洗手检测框
+        for handwash_result in handwash_results:
+            if handwash_result["is_handwashing"]:
+                left_bbox = handwash_result["left_hand_bbox"]
+                right_bbox = handwash_result["right_hand_bbox"]
+                
+                # 左手
+                x1, y1, x2, y2 = map(int, left_bbox)
+                cv2.rectangle(annotated_image, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                cv2.putText(annotated_image, "Handwash", (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
+                
+                # 右手
+                x1, y1, x2, y2 = map(int, right_bbox)
+                cv2.rectangle(annotated_image, (x1, y1), (x2, y2), (255, 0, 0), 2)
+        
+        # 将结果图像编码为base64
+        _, buffer = cv2.imencode(".jpg", annotated_image)
+        img_base64 = base64.b64encode(buffer.tobytes()).decode("utf-8")
+        
+        # 统计信息
+        total_persons = len(person_detections)
+        persons_with_hairnet = sum(1 for h in hairnet_results if h["has_hairnet"])
+        persons_handwashing = sum(1 for h in handwash_results if h["is_handwashing"])
+        persons_sanitizing = sum(1 for h in handwash_results if h["is_sanitizing"])
+        
+        hairnet_compliance_rate = (persons_with_hairnet / total_persons * 100) if total_persons > 0 else 0
+        handwash_rate = (persons_handwashing / total_persons * 100) if total_persons > 0 else 0
+        sanitize_rate = (persons_sanitizing / total_persons * 100) if total_persons > 0 else 0
+        
+        return {
+            "success": True,
+            "total_persons": total_persons,
+            "person_detections": person_detections,
+            "hairnet_results": hairnet_results,
+            "handwash_results": handwash_results,
+            "statistics": {
+                "persons_with_hairnet": persons_with_hairnet,
+                "persons_without_hairnet": total_persons - persons_with_hairnet,
+                "persons_handwashing": persons_handwashing,
+                "persons_sanitizing": persons_sanitizing,
+                "hairnet_compliance_rate": round(hairnet_compliance_rate, 2),
+                "handwash_rate": round(handwash_rate, 2),
+                "sanitize_rate": round(sanitize_rate, 2)
+            },
+            "processing_time": {
+                "detection_time": round(detection_time, 3),
+                "hairnet_time": round(hairnet_time, 3),
+                "handwash_time": round(handwash_time, 3),
+                "total_time": round(detection_time + hairnet_time + handwash_time, 3)
+            },
+            "annotated_image": img_base64
+        }
+    
+    try:
+        result = await process_uploaded_file(file, comprehensive_detection_func, "comprehensive_detection")
+        
+        if result["file_type"] == "image":
+            return {
+                "success": True,
+                "file_type": "image",
+                **result["results"]
+            }
+        else:  # video
+            # 计算视频整体统计
+            all_frames = result["results"]
+            total_persons = sum(frame["total_persons"] for frame in all_frames)
+            total_persons_with_hairnet = sum(frame["statistics"]["persons_with_hairnet"] for frame in all_frames)
+            total_persons_handwashing = sum(frame["statistics"]["persons_handwashing"] for frame in all_frames)
+            total_persons_sanitizing = sum(frame["statistics"]["persons_sanitizing"] for frame in all_frames)
+            
+            avg_hairnet_compliance = sum(frame["statistics"]["hairnet_compliance_rate"] for frame in all_frames) / len(all_frames) if all_frames else 0
+            avg_handwash_rate = sum(frame["statistics"]["handwash_rate"] for frame in all_frames) / len(all_frames) if all_frames else 0
+            avg_sanitize_rate = sum(frame["statistics"]["sanitize_rate"] for frame in all_frames) / len(all_frames) if all_frames else 0
+            
+            return {
+                "success": True,
+                "file_type": "video",
+                "total_frames": result["total_frames"],
+                "processed_frames": len(all_frames),
+                "overall_statistics": {
+                    "total_persons": total_persons,
+                    "total_persons_with_hairnet": total_persons_with_hairnet,
+                    "total_persons_handwashing": total_persons_handwashing,
+                    "total_persons_sanitizing": total_persons_sanitizing,
+                    "average_hairnet_compliance_rate": round(avg_hairnet_compliance, 2),
+                    "average_handwash_rate": round(avg_handwash_rate, 2),
+                    "average_sanitize_rate": round(avg_sanitize_rate, 2)
+                },
+                "frames": all_frames
+            }
+            
+    except Exception as e:
+        logger.error(f"综合检测失败: {e}")
+        raise HTTPException(status_code=500, detail=f"检测失败: {str(e)}")
 
 
 if __name__ == "__main__":

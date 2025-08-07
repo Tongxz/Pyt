@@ -14,16 +14,15 @@ from PIL import Image
 
 def test_real_hairnet_image():
     """测试真实发网图片"""
-    # 这里需要用户将真实图片保存到项目目录中
-    # 用户可以将图片保存为 test_person.png
+    # 使用tests目录下的测试图片
+    test_image_path = "tests/fixtures/images/person/test_person.png"
 
     print("=== 真实发网图片测试 ===")
-    print("请将真实发网图片保存为 'test_person.png' 到项目根目录")
-    print("然后运行此脚本进行测试")
+    print(f"使用测试图片: {test_image_path}")
 
     try:
-        # 尝试读取真实图片文件
-        with open("test_person.png", "rb") as f:
+        # 尝试读取测试图片文件
+        with open(test_image_path, "rb") as f:
             image_data = f.read()
 
         # 发送到API进行检测
@@ -72,8 +71,8 @@ def test_real_hairnet_image():
             print(f"测试失败: {response.text}")
 
     except FileNotFoundError:
-        print("错误: 未找到 'test_person.png' 文件")
-        print("请将真实发网图片保存为 'test_person.png' 到项目根目录")
+        print(f"错误: 未找到测试图片文件 '{test_image_path}'")
+        print("请确保tests/fixtures/images目录下有测试图片")
     except Exception as e:
         print(f"测试失败: {e}")
 
