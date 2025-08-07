@@ -234,7 +234,9 @@ class YOLOHairnetDetector:
         logger.info("统计信息已重置")
 
     def detect_hairnet_compliance(
-        self, image: Union[str, np.ndarray], human_detections: Optional[List[Dict]] = None
+        self,
+        image: Union[str, np.ndarray],
+        human_detections: Optional[List[Dict]] = None,
     ) -> Dict[str, Any]:
         """
         检测图像中的发网佩戴合规性（与传统检测器API兼容）
@@ -268,7 +270,7 @@ class YOLOHairnetDetector:
                     raise ValueError(f"无法读取图像文件: {image}")
             else:
                 image_array = image
-            
+
             # 使用基础detect方法获取发网检测结果
             result = self.detect(image_array)
 
