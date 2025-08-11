@@ -403,11 +403,11 @@ class RegionManager:
             
             # 加载区域
             for region_data in config.get('regions', []):
-                region_type = RegionType(region_data['region_type'])
+                region_type = RegionType(region_data['type'])
                 region = Region(
-                    region_data['region_id'],
+                    region_data['id'],
                     region_type,
-                    region_data['polygon'],
+                    region_data['points'],
                     region_data['name']
                 )
                 region.is_active = region_data.get('is_active', True)

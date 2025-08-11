@@ -9,18 +9,18 @@ Pytest配置文件
 
 import os
 import sys
-import types
-import unittest.mock
 from pathlib import Path
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+import matplotlib.pyplot as plt
+import unittest.mock
+import types
+import numpy as np
 
 # 在测试环境中创建 ultralytics.YOLO 的轻量级替代，避免下载权重和耗时初始化
 _dummy_ultralytics = types.ModuleType("ultralytics")
-
 
 class _EarlyDummyResult:
     def __init__(self):
@@ -28,7 +28,6 @@ class _EarlyDummyResult:
 
     def plot(self, *args, **kwargs):
         return np.zeros((10, 10, 3), dtype=np.uint8)
-
 
 class _EarlyDummyYOLO:
     def __init__(self, *args, **kwargs):
@@ -39,7 +38,6 @@ class _EarlyDummyYOLO:
 
     predict = __call__
     train = lambda *a, **k: None
-
 
 setattr(_dummy_ultralytics, "YOLO", _EarlyDummyYOLO)
 sys.modules.setdefault("ultralytics", _dummy_ultralytics)
@@ -149,9 +147,7 @@ def disable_gui_funcs(monkeypatch):
     # 替换 OpenCV GUI 函数
     monkeypatch.setattr(cv2, "imshow", lambda *args, **kwargs: None, raising=False)
     monkeypatch.setattr(cv2, "waitKey", lambda *args, **kwargs: 1, raising=False)
-    monkeypatch.setattr(
-        cv2, "destroyAllWindows", lambda *args, **kwargs: None, raising=False
-    )
+    monkeypatch.setattr(cv2, "destroyAllWindows", lambda *args, **kwargs: None, raising=False)
 
     # 替换 Matplotlib 显示函数
     monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None, raising=False)
@@ -162,7 +158,6 @@ def mock_ultralytics_yolo(monkeypatch):
     """Mock ultralytics.YOLO 以避免在测试期间下载权重或进行耗时推理"""
     import sys
     import types
-
     import numpy as np
 
     class _DummyResult:

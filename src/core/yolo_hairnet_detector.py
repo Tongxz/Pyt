@@ -51,7 +51,12 @@ class YOLOHairnetDetector:
             conf_thres: 置信度阈值，默认为 0.25
             iou_thres: IoU 阈值，默认为 0.45
         """
-        self.model_path = model_path
+        project_root = Path(__file__).resolve().parents[2]
+        if not Path(model_path).is_absolute():
+            self.model_path = str(project_root / model_path)
+        else:
+            self.model_path = model_path
+        
         self.device = self._get_device(device)
         self.conf_thres = conf_thres
         self.iou_thres = iou_thres

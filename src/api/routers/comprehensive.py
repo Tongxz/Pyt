@@ -1,0 +1,43 @@
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
+from typing import Dict, Any, Optional
+import logging
+
+from services.detection_service import (
+    comprehensive_detection_logic,
+    get_optimized_pipeline,
+    get_hairnet_pipeline,
+)
+from core.optimized_detection_pipeline import OptimizedDetectionPipeline
+from core.yolo_hairnet_detector import YOLOHairnetDetector
+
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+@router.post("/comprehensive", summary="综合检测接口")
+async def detect_comprehensive(
+    file: UploadFile = File(...),
+    optimized_pipeline: Optional[OptimizedDetectionPipeline] = Depends(get_optimized_pipeline),
+    hairnet_pipeline: Optional[YOLOHairnetDetector] = Depends(get_hairnet_pipeline),
+) -> Dict[str, Any]:
+    """
+    执行综合检测，包括人体、发网、洗手、消毒等。
+    优先使用优化管道，如果不可用则回退到原有逻辑。
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="未提供文件名")
+
+    contents = await file.read()
+    
+    try:
+        result = comprehensive_detection_logic(
+            contents=contents,
+            filename=file.filename,
+            optimized_pipeline=optimized_pipeline,
+            hairnet_pipeline=hairnet_pipeline
+        )
+        return result
+    except Exception as e:
+        logger.exception(f"综合检测失败: {e}")
+        if "检测服务未初始化" in str(e):
+             raise HTTPException(status_code=500, detail="检测服务未初始化")
+        raise HTTPException(status_code=500, detail=f"处理失败: {str(e)}")

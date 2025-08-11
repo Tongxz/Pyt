@@ -249,7 +249,7 @@
                 const formData = new FormData();
                 formData.append('file', selectedFile);
 
-                fetch('/api/v1/detect/hairnet', {
+                fetch('/api/v1/detect/comprehensive', {
                     method: 'POST',
                     body: formData
                 })
@@ -259,7 +259,7 @@
                     detectBtn.disabled = false;
 
                     // 显示检测结果
-                    displayResults(data);
+                    displayResults(data.result);
                 })
                 .catch(error => {
                     console.error('检测失败:', error);

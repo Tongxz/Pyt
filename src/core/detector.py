@@ -28,7 +28,7 @@ class HumanDetector:
         self.model = self._load_model(model_path)
         self.confidence_threshold = 0.3  # 提高置信度阈值，减少误检测
         self.iou_threshold = 0.5  # 提高IoU阈值，更严格的重叠抑制
-        self.min_box_area = 800  # 提高最小检测框面积，过滤小目标
+        self.min_box_area = 800   # 提高最小检测框面积，过滤小目标
         self.max_box_ratio = 6.0  # 放宽最大宽高比限制
 
         logger.info(f"HumanDetector initialized on {self.device}")

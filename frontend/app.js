@@ -251,7 +251,7 @@ class HumanDetectionApp {
             }
 
             const result = await response.json();
-            this.displayComprehensiveDetectionResult(result);
+            this.displayComprehensiveDetectionResult({ comprehensive_detection: result });
             this.showStatus('uploadStatus', `✅ 综合检测完成`, 'success');
 
         } catch (error) {
@@ -264,12 +264,13 @@ class HumanDetectionApp {
 
     // 显示多个检测结果
     // 显示综合检测结果
-    displayComprehensiveDetectionResult(result) {
+    displayComprehensiveDetectionResult(data) {
+        const result = data.comprehensive_detection || {};
         const fileType = this.currentFileType === 'image' ? '图片' : '视频';
-
+        
         // 创建综合检测结果的HTML
         const comprehensiveHtml = this.generateComprehensiveResultHtml(result);
-
+        
         let resultHtml = `
             <div class="comprehensive-results-container">
                 <h3 style="text-align: center; margin-bottom: 1.5rem; color: #333;">🔍 综合检测结果</h3>
@@ -278,14 +279,14 @@ class HumanDetectionApp {
                 </div>
             </div>
         `;
-
+        
         this.uploadResult.innerHTML = resultHtml;
     }
 
     // 生成综合检测结果HTML
     generateComprehensiveResultHtml(result) {
         const isVideo = this.currentFileType === 'video';
-
+        
         if (isVideo) {
             return this.generateComprehensiveVideoResultHtml(result);
         } else {
@@ -296,35 +297,45 @@ class HumanDetectionApp {
     // 生成综合图像检测结果HTML
     generateComprehensiveImageResultHtml(result) {
         let html = '<div class="comprehensive-result">';
-
+        
+        // 从后端返回的数据中提取统计信息
+        const totalPersons = result.total_persons || 0;
+        const statistics = result.statistics || {};
+        const personsWithHairnet = statistics.persons_with_hairnet || 0;
+        const personsHandwashing = statistics.persons_handwashing || 0;
+        const personsSanitizing = statistics.persons_sanitizing || 0;
+        
         // 显示检测统计
         html += '<div class="detection-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">';
         html += `<div class="info-card" style="text-align: center; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e9ecef;">`;
-        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #333;">${result.person_count || 0}</div>`;
+        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #333;">${totalPersons}</div>`;
         html += `<div class="info-label" style="font-size: 0.85rem; color: #666;">👥 人体检测</div>`;
         html += `</div>`;
         html += `<div class="info-card" style="text-align: center; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e9ecef;">`;
-        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #28a745;">${result.hairnet_count || 0}</div>`;
+        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #28a745;">${personsWithHairnet}</div>`;
         html += `<div class="info-label" style="font-size: 0.85rem; color: #666;">🧢 发网检测</div>`;
         html += `</div>`;
         html += `<div class="info-card" style="text-align: center; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e9ecef;">`;
-        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #007bff;">${result.handwash_count || 0}</div>`;
+        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #007bff;">${personsHandwashing}</div>`;
         html += `<div class="info-label" style="font-size: 0.85rem; color: #666;">🧼 洗手检测</div>`;
         html += `</div>`;
         html += `<div class="info-card" style="text-align: center; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e9ecef;">`;
-        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #6f42c1;">${result.sanitize_count || 0}</div>`;
+        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #6f42c1;">${personsSanitizing}</div>`;
         html += `<div class="info-label" style="font-size: 0.85rem; color: #666;">🧴 消毒检测</div>`;
         html += `</div>`;
         html += '</div>';
-
+        
         // 显示检测图像
-        if (result.image_url) {
+        const imageData = result.annotated_image || result.image_url;
+        if (imageData) {
             html += '<div class="detection-image" style="text-align: center; margin-bottom: 1.5rem;">';
             html += `<h4 style="color: #667eea; margin-bottom: 1rem;">检测结果图像</h4>`;
-            html += `<img src="${result.image_url}" alt="综合检测结果" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">`;
+            // 如果是base64数据，添加data URL前缀
+            const imageSrc = imageData.startsWith('data:') ? imageData : `data:image/jpeg;base64,${imageData}`;
+            html += `<img src="${imageSrc}" alt="综合检测结果" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">`;
             html += '</div>';
         }
-
+        
         // 显示详细检测信息
         if (result.detections && result.detections.length > 0) {
             html += '<div class="detection-details" style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef;">';
@@ -340,7 +351,7 @@ class HumanDetectionApp {
             html += '</ul>';
             html += '</div>';
         }
-
+        
         html += '</div>';
         return html;
     }
@@ -348,27 +359,34 @@ class HumanDetectionApp {
     // 生成综合视频检测结果HTML
     generateComprehensiveVideoResultHtml(result) {
         let html = '<div class="comprehensive-result">';
-
+        
+        // 从后端返回的数据中提取统计信息
+        const totalPersons = result.total_persons || 0;
+        const statistics = result.statistics || {};
+        const personsWithHairnet = statistics.persons_with_hairnet || 0;
+        const personsHandwashing = statistics.persons_handwashing || 0;
+        const personsSanitizing = statistics.persons_sanitizing || 0;
+        
         // 显示检测统计
         html += '<div class="detection-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">';
         html += `<div class="info-card" style="text-align: center; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e9ecef;">`;
-        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #333;">${result.person_count || 0}</div>`;
+        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #333;">${totalPersons}</div>`;
         html += `<div class="info-label" style="font-size: 0.85rem; color: #666;">👥 人体检测</div>`;
         html += `</div>`;
         html += `<div class="info-card" style="text-align: center; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e9ecef;">`;
-        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #28a745;">${result.hairnet_count || 0}</div>`;
+        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #28a745;">${personsWithHairnet}</div>`;
         html += `<div class="info-label" style="font-size: 0.85rem; color: #666;">🧢 发网检测</div>`;
         html += `</div>`;
         html += `<div class="info-card" style="text-align: center; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e9ecef;">`;
-        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #007bff;">${result.handwash_count || 0}</div>`;
+        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #007bff;">${personsHandwashing}</div>`;
         html += `<div class="info-label" style="font-size: 0.85rem; color: #666;">🧼 洗手检测</div>`;
         html += `</div>`;
         html += `<div class="info-card" style="text-align: center; padding: 1rem; background: white; border-radius: 8px; border: 1px solid #e9ecef;">`;
-        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #6f42c1;">${result.sanitize_count || 0}</div>`;
+        html += `<div class="info-value" style="font-size: 1.5rem; font-weight: bold; color: #6f42c1;">${personsSanitizing}</div>`;
         html += `<div class="info-label" style="font-size: 0.85rem; color: #666;">🧴 消毒检测</div>`;
         html += `</div>`;
         html += '</div>';
-
+        
         // 显示处理后的视频
         if (result.video_url) {
             html += '<div class="detection-video" style="text-align: center; margin-bottom: 1.5rem;">';
@@ -377,7 +395,7 @@ class HumanDetectionApp {
             html += `<source src="${result.video_url}" type="video/mp4">`;
             html += '您的浏览器不支持视频播放。';
             html += '</video>';
-
+            
             // 添加下载链接
             html += `<div class="download-section" style="margin-top: 10px;">`;
             html += `<a href="${result.video_url}" download="comprehensive_detection_result.mp4" class="btn btn-secondary" style="display: inline-block; padding: 0.5rem 1rem; background: #6c757d; color: white; text-decoration: none; border-radius: 4px;">`;
@@ -385,7 +403,7 @@ class HumanDetectionApp {
             html += '</div>';
             html += '</div>';
         }
-
+        
         // 显示详细检测信息
         if (result.detections && result.detections.length > 0) {
             html += '<div class="detection-details" style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef;">';
@@ -401,11 +419,11 @@ class HumanDetectionApp {
             html += '</ul>';
             html += '</div>';
         }
-
+        
         html += '</div>';
         return html;
     }
-
+    
     // 获取检测类型名称
     getDetectionTypeName(detectionType) {
         const names = {
@@ -416,7 +434,7 @@ class HumanDetectionApp {
         };
         return names[detectionType] || detectionType;
     }
-
+    
     // 获取检测类型图标
     getDetectionTypeIcon(detectionType) {
         const icons = {
@@ -427,7 +445,7 @@ class HumanDetectionApp {
         };
         return icons[detectionType] || '🎯';
     }
-
+    
     // 生成发网检测结果HTML
     generateHairnetResultHtml(result, fileType) {
         let detectionData;
@@ -436,13 +454,13 @@ class HumanDetectionApp {
         } else {
             detectionData = result.detections || {};
         }
-
+        
         const totalPersons = detectionData.total_persons || 0;
         const personsWithHairnet = detectionData.persons_with_hairnet || 0;
         const personsWithoutHairnet = detectionData.persons_without_hairnet || 0;
         const complianceRate = detectionData.compliance_rate || 0;
         const avgConfidence = detectionData.average_confidence || 0;
-
+        
         let additionalInfo = '';
         if (this.currentFileType === 'video' && result.video_info) {
             additionalInfo = `
@@ -456,7 +474,7 @@ class HumanDetectionApp {
                 </div>
             `;
         }
-
+        
         let videoDownloadHtml = '';
         if (this.currentFileType === 'video' && result.output_video) {
             videoDownloadHtml = `
@@ -467,7 +485,7 @@ class HumanDetectionApp {
                 </div>
             `;
         }
-
+        
         let annotatedImageHtml = '';
         if (result.annotated_image) {
             annotatedImageHtml = `
@@ -476,7 +494,7 @@ class HumanDetectionApp {
                 </div>
             `;
         }
-
+        
         return `
             ${annotatedImageHtml}
             ${videoDownloadHtml}
@@ -505,13 +523,13 @@ class HumanDetectionApp {
             </div>
         `;
     }
-
+    
     // 生成行为检测结果HTML
     generateBehaviorResultHtml(result, fileType, behaviorName) {
         // 简化的行为检测结果显示
         const detected = result.detected || false;
         const confidence = result.confidence || 0;
-
+        
         return `
             <div class="behavior-result" style="text-align: center; padding: 2rem;">
                 <div class="behavior-status" style="font-size: 3rem; margin-bottom: 1rem;">
@@ -526,12 +544,12 @@ class HumanDetectionApp {
             </div>
         `;
     }
-
+    
     // 生成区域分析结果HTML
     generateRegionResultHtml(result, fileType) {
         // 简化的区域分析结果显示
         const regions = result.regions || [];
-
+        
         return `
             <div class="region-result" style="text-align: center; padding: 2rem;">
                 <div class="region-count" style="font-size: 2rem; margin-bottom: 1rem; color: #667eea;">
@@ -547,7 +565,7 @@ class HumanDetectionApp {
     // 显示检测结果
     displayDetectionResult(result) {
         const fileType = this.currentFileType === 'image' ? '图片' : '视频';
-
+        
         // 根据检测类型显示不同的结果
         switch (this.currentDetectionType) {
             case 'hairnet':
@@ -689,14 +707,14 @@ class HumanDetectionApp {
     // 显示行为检测结果（洗手/消毒）
     displayBehaviorResult(result, fileType, behaviorType) {
         console.log(`${behaviorType}检测结果:`, result);
-
+        
         // 行为检测结果数据
         const detectionData = result.detections || result.overall_statistics || {};
         const totalPersons = detectionData.total_persons || 0;
         const behaviorDetected = detectionData.behavior_detected || false;
         const confidence = detectionData.confidence || 0;
         const duration = detectionData.duration || 0;
-
+        
         // 显示带标注的结果图片
         let annotatedImageHtml = '';
         if (result.annotated_image) {
@@ -715,7 +733,7 @@ class HumanDetectionApp {
                 </div>
             `;
         }
-
+        
         // 视频下载按钮
         let videoDownloadHtml = '';
         if (this.currentFileType === 'video' && result.output_video) {
@@ -733,7 +751,7 @@ class HumanDetectionApp {
                 </div>
             `;
         }
-
+        
         this.uploadResult.innerHTML = `
             <div class="result-container">
                 <h3>🧼 ${fileType}${behaviorType}行为检测结果</h3>
@@ -764,7 +782,7 @@ class HumanDetectionApp {
     // 显示区域分析结果
     displayRegionResult(result, fileType) {
         console.log('区域分析结果:', result);
-
+        
         // 区域分析结果数据
         const detectionData = result.detections || result.overall_statistics || {};
         const totalPersons = detectionData.total_persons || 0;
@@ -772,7 +790,7 @@ class HumanDetectionApp {
         const personsWithoutHairnet = detectionData.persons_without_hairnet || 0;
         const complianceRate = detectionData.compliance_rate || 0;
         const avgConfidence = detectionData.average_confidence || 0;
-
+        
         // 显示带标注的结果图片
         let annotatedImageHtml = '';
         if (result.annotated_image) {
@@ -791,7 +809,7 @@ class HumanDetectionApp {
                 </div>
             `;
         }
-
+        
         // 视频下载按钮
         let videoDownloadHtml = '';
         if (this.currentFileType === 'video' && result.output_video) {
@@ -809,7 +827,7 @@ class HumanDetectionApp {
                 </div>
             `;
         }
-
+        
         this.uploadResult.innerHTML = `
             <div class="result-container">
                 <h3>🔍 ${fileType}区域分析结果</h3>
@@ -952,7 +970,7 @@ class HumanDetectionApp {
                     this.showStatus('realtimeStatus', `❌ ${data.message}`, 'error');
                 } else if (data.type === 'ping') {
                     // 响应心跳
-                    this.websocket.send(JSON.stringify({ type: 'pong' }));
+                    this.websocket.send(JSON.stringify({type: 'pong'}));
                 }
             } catch (error) {
                 console.error('WebSocket消息解析错误:', error);
@@ -1072,7 +1090,7 @@ class HumanDetectionApp {
         `;
 
         // 根据类型设置背景色
-        switch (type) {
+        switch(type) {
             case 'success':
                 notification.style.backgroundColor = '#10b981';
                 break;

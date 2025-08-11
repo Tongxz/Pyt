@@ -30,9 +30,7 @@ class TestHandwashBehavior(unittest.TestCase):
             hand_y_center + hand_h // 2,
         ]
 
-        confidence = self.recognizer.detect_handwashing(
-            self.person_bbox, [{"bbox": hand_bbox}]
-        )
+        confidence = self.recognizer.detect_handwashing(self.person_bbox, [{"bbox": hand_bbox}])
         # 默认 _analyze_hand_motion 返回 0.6
         self.assertEqual(confidence, 0.6)
         self.assertGreater(confidence, self.recognizer.confidence_threshold)
@@ -51,9 +49,7 @@ class TestHandwashBehavior(unittest.TestCase):
             hand_y_center + hand_h // 2,
         ]
 
-        confidence = self.recognizer.detect_handwashing(
-            self.person_bbox, [{"bbox": hand_bbox}]
-        )
+        confidence = self.recognizer.detect_handwashing(self.person_bbox, [{"bbox": hand_bbox}])
         self.assertEqual(confidence, 0.0)
 
 
