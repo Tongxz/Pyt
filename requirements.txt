@@ -18,7 +18,7 @@ numpy>=1.24.0,<2.0
 # 计算机视觉
 opencv-python>=4.8.0
 pandas>=2.0.0
-# mediapipe>=0.10.0  # 暂时注释，依赖冲突
+mediapipe>=0.10.0
 Pillow>=9.5.0
 psycopg2-binary>=2.9.0
 

@@ -33,6 +33,37 @@
       "isActive": true,
       "createdAt": "2025-08-06T08:43:25.725Z",
       "color": "#28a745"
+    },
+    {
+      "name": "洗手区域",
+      "type": "handwash",
+      "polygon": [[300, 150], [450, 150], [450, 300], [300, 300]],
+      "rules": {
+        "require_handwashing": true,
+        "min_duration": 20,
+        "detection_sensitivity": 0.6
+      }
+    },
+    {
+      "name": "消毒区域",
+      "type": "sanitize",
+      "polygon": [[500, 100], [650, 100], [650, 250], [500, 250]],
+      "rules": {
+        "require_sanitizing": true,
+        "min_duration": 10,
+        "detection_sensitivity": 0.5
+      }
+    },
+    {
+      "name": "入口洗手区",
+      "type": "handwash",
+      "polygon": [[50, 400], [200, 400], [200, 550], [50, 550]],
+      "rules": {
+        "require_handwashing": true,
+        "require_hairnet": true,
+        "min_duration": 25,
+        "detection_sensitivity": 0.7
+      }
     }
   ],
   "canvas_size": {
