@@ -56,7 +56,7 @@ class YOLOHairnetDetector:
             self.model_path = str(project_root / model_path)
         else:
             self.model_path = model_path
-        
+
         self.device = self._get_device(device)
         self.conf_thres = conf_thres
         self.iou_thres = iou_thres

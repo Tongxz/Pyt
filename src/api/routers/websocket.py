@@ -1,14 +1,18 @@
 import logging
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 
-from services.websocket_service import ConnectionManager, get_connection_manager
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+
 from services.detection_service import comprehensive_detection_logic
+from services.websocket_service import ConnectionManager, get_connection_manager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+
 @router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, manager: ConnectionManager = Depends(get_connection_manager)):
+async def websocket_endpoint(
+    websocket: WebSocket, manager: ConnectionManager = Depends(get_connection_manager)
+):
     await manager.connect(websocket)
     try:
         while True:

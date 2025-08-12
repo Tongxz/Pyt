@@ -442,9 +442,11 @@ class OptimizedDetectionPipeline:
                     is_handwashing = (
                         confidence >= self.behavior_recognizer.confidence_threshold
                     )
-                    
+
                     # 添加调试日志
-                    logger.info(f"人员 {i+1} 洗手检测: 置信度={confidence:.3f}, 阈值={self.behavior_recognizer.confidence_threshold}, 结果={is_handwashing}")
+                    logger.info(
+                        f"人员 {i+1} 洗手检测: 置信度={confidence:.3f}, 阈值={self.behavior_recognizer.confidence_threshold}, 结果={is_handwashing}"
+                    )
                 else:
                     is_handwashing = False
                     confidence = 0.0
