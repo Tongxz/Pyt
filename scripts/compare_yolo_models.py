@@ -25,7 +25,6 @@ logger = get_logger(__name__, level="INFO")
 
 def test_model_comparison():
     """对比不同YOLO模型的检测效果."""
-
     # 测试图像路径
     test_image_path = "tests/fixtures/images/hairnet/7月23日.png"
 
@@ -200,7 +199,6 @@ def test_model_comparison():
 
 def test_custom_detector_with_different_models():
     """测试自定义检测器使用不同模型的效果."""
-
     print("\n" + "=" * 80)
     print("自定义检测器模型对比")
     print("=" * 80)
