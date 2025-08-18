@@ -13,7 +13,7 @@
 
 ### 1. 确保模型已训练
 
-确保您已经按照 `README_HAIRNET_DETECTION.md` 中的说明训练了 YOLOv8 发网检测模型，并且模型文件位于 `models/hairnet_detection.pt`。
+确保您已经按照 `README_HAIRNET_DETECTION.md` 中的说明训练了 YOLOv8 发网检测模型，并且模型文件位于 `models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt`。
 
 ### 2. 直接使用 YOLOv8 发网检测器
 
@@ -22,7 +22,7 @@ python examples/use_yolo_hairnet_detector.py --image path/to/image.jpg
 ```
 
 可选参数：
-- `--model`: 模型路径，默认为 `models/hairnet_detection.pt`
+- `--model`: 模型路径，默认为 `models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt`
 - `--conf-thres`: 置信度阈值，默认为 0.25
 - `--device`: 计算设备，可选 `cpu`, `cuda`, `auto`
 - `--save`: 保存结果图像
@@ -36,7 +36,7 @@ python examples/integrate_yolo_detector.py --image path/to/image.jpg
 
 可选参数：
 - `--detector-type`: 检测器类型，可选 `auto`, `yolo`，默认为 `auto`（两者效果相同）
-- `--model`: 模型路径，默认为 `models/hairnet_detection.pt`
+- `--model`: 模型路径，默认为 `models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt`
 - `--conf-thres`: 置信度阈值，默认为 0.25
 - `--iou-thres`: IoU阈值，默认为 0.45
 - `--device`: 计算设备，可选 `cpu`, `cuda`, `auto`
@@ -52,7 +52,7 @@ from src.core.yolo_hairnet_detector import YOLOHairnetDetector
 
 # 初始化检测器
 detector = YOLOHairnetDetector(
-    model_path='models/hairnet_detection.pt',
+    model_path='models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt',
     device='auto',
     conf_thres=0.25,
     iou_thres=0.45
@@ -82,7 +82,7 @@ from src.core.hairnet_detection_factory import HairnetDetectionFactory
 # 创建YOLOv8检测器
 detector = HairnetDetectionFactory.create_detector(
     detector_type='yolo',  # 'auto'和'yolo'效果相同
-    model_path='models/hairnet_detection.pt',
+    model_path='models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt',
     device='auto',
     conf_thres=0.25,
     iou_thres=0.45
@@ -108,7 +108,7 @@ detections = result.get('detections', [])
 
 ```python
 from src.core.yolo_hairnet_detector import YOLOHairnetDetector
-detector = YOLOHairnetDetector(model_path='models/hairnet_detection.pt', device='auto')
+detector = YOLOHairnetDetector(model_path='models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt', device='auto')
 ```
 
 2. 使用工厂模式创建检测器：
@@ -117,7 +117,7 @@ detector = YOLOHairnetDetector(model_path='models/hairnet_detection.pt', device=
 from src.core.hairnet_detection_factory import HairnetDetectionFactory
 
 # 创建检测器（可以通过环境变量配置参数）
-model_path = os.environ.get('HAIRNET_MODEL_PATH', 'models/hairnet_detection.pt')
+model_path = os.environ.get('HAIRNET_MODEL_PATH', 'models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt')
 device = os.environ.get('HAIRNET_DEVICE', 'auto')
 conf_thres = float(os.environ.get('HAIRNET_CONF_THRES', '0.25'))
 iou_thres = float(os.environ.get('HAIRNET_IOU_THRES', '0.45'))
@@ -151,7 +151,7 @@ YOLOv8 发网检测器具有以下优势：
 ### 1. 模型文件不存在
 
 ```
-FileNotFoundError: [Errno 2] No such file or directory: 'models/hairnet_detection.pt'
+FileNotFoundError: [Errno 2] No such file or directory: 'models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt'
 ```
 
 确保模型文件已下载并放置在正确的路径。
@@ -162,7 +162,7 @@ FileNotFoundError: [Errno 2] No such file or directory: 'models/hairnet_detectio
 
 ```python
 detector = YOLOHairnetDetector(
-    model_path='models/hairnet_detection.pt',
+    model_path='models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt',
     conf_thres=0.4,  # 增加置信度阈值，减少误检
     iou_thres=0.45   # 调整IoU阈值，控制重叠框处理
 )
@@ -183,7 +183,7 @@ RuntimeError: CUDA out of memory
 将 `device` 参数设置为 `'cpu'`：
 
 ```python
-detector = YOLOHairnetDetector(model_path='models/hairnet_detection.pt', device='cpu')
+detector = YOLOHairnetDetector(model_path='models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt', device='cpu')
 ```
 
 如果GPU内存不足，也可以尝试使用更小的模型或降低输入图像分辨率。

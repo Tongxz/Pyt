@@ -227,7 +227,7 @@ start_backend() {
     fi
 
     # 设置环境变量
-    export HAIRNET_MODEL_PATH="models/hairnet_detection.pt"
+    export HAIRNET_MODEL_PATH="models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt"
     export HAIRNET_DEVICE="cpu"
     export HAIRNET_CONF_THRES="0.5"
     export HAIRNET_IOU_THRES="0.4"

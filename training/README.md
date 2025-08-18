@@ -20,7 +20,7 @@
   - `--epochs N`: 训练轮数（默认100）
   - `--batch-size N`: 批次大小（默认16）
   - `--img-size N`: 图像尺寸（默认640）
-  - `--weights FILE`: 预训练权重（默认yolov8m.pt）
+  - `--weights FILE`: 预训练权重（默认models/yolo/yolov8m.pt）
   - `--device STR`: 训练设备（如cuda:0或cpu）
 
 ### start_training.ps1

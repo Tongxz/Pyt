@@ -299,8 +299,8 @@ class HumanDetectionApp {
         let html = '<div class="comprehensive-result">';
 
         // 从后端返回的数据中提取统计信息
-        const totalPersons = result.total_persons || 0;
         const statistics = result.statistics || {};
+        const totalPersons = result.total_persons || statistics.total_persons || 0;
         const personsWithHairnet = statistics.persons_with_hairnet || 0;
         const personsHandwashing = statistics.persons_handwashing || 0;
         const personsSanitizing = statistics.persons_sanitizing || 0;
@@ -361,8 +361,8 @@ class HumanDetectionApp {
         let html = '<div class="comprehensive-result">';
 
         // 从后端返回的数据中提取统计信息
-        const totalPersons = result.total_persons || 0;
         const statistics = result.statistics || {};
+        const totalPersons = statistics.total_persons || 0;
         const personsWithHairnet = statistics.persons_with_hairnet || 0;
         const personsHandwashing = statistics.persons_handwashing || 0;
         const personsSanitizing = statistics.persons_sanitizing || 0;
@@ -387,19 +387,45 @@ class HumanDetectionApp {
         html += `</div>`;
         html += '</div>';
 
-        // 显示处理后的视频
-        if (result.video_url) {
+        // 显示处理后的视频（支持新的output_video格式）
+        const videoUrl = result.video_url || (result.output_video && result.output_video.url);
+        const videoFilename = result.output_video && result.output_video.filename;
+
+        if (videoUrl) {
             html += '<div class="detection-video" style="text-align: center; margin-bottom: 1.5rem;">';
-            html += `<h4 style="color: #667eea; margin-bottom: 1rem;">检测结果视频</h4>`;
+            html += `<h4 style="color: #667eea; margin-bottom: 1rem;">🎬 检测结果视频</h4>`;
             html += `<video controls style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">`;
-            html += `<source src="${result.video_url}" type="video/mp4">`;
+            html += `<source src="${videoUrl}" type="video/mp4">`;
             html += '您的浏览器不支持视频播放。';
             html += '</video>';
 
             // 添加下载链接
             html += `<div class="download-section" style="margin-top: 10px;">`;
-            html += `<a href="${result.video_url}" download="comprehensive_detection_result.mp4" class="btn btn-secondary" style="display: inline-block; padding: 0.5rem 1rem; background: #6c757d; color: white; text-decoration: none; border-radius: 4px;">`;
+            const downloadFilename = videoFilename || 'comprehensive_detection_result.mp4';
+            html += `<a href="${videoUrl}" download="${downloadFilename}" class="btn btn-secondary" style="display: inline-block; padding: 0.5rem 1rem; background: #6c757d; color: white; text-decoration: none; border-radius: 4px;">`;
             html += '📥 下载检测结果视频</a>';
+            html += '</div>';
+            html += '</div>';
+        }
+
+        // 显示处理信息（如果有的话）
+        if (result.processing_info) {
+            const info = result.processing_info;
+            html += '<div class="processing-info" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">';
+            html += `<h4 style="color: #667eea; margin-bottom: 1rem;">📊 处理信息</h4>`;
+            html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem;">';
+            if (info.total_frames) {
+                html += `<div><strong>总帧数:</strong> ${info.total_frames}</div>`;
+            }
+            if (info.processed_frames) {
+                html += `<div><strong>处理帧数:</strong> ${info.processed_frames}</div>`;
+            }
+            if (info.processing_time) {
+                html += `<div><strong>处理时间:</strong> ${info.processing_time.toFixed(2)}秒</div>`;
+            }
+            if (info.fps) {
+                html += `<div><strong>帧率:</strong> ${info.fps} FPS</div>`;
+            }
             html += '</div>';
             html += '</div>';
         }
@@ -961,7 +987,9 @@ class HumanDetectionApp {
             try {
                 const data = JSON.parse(event.data);
 
-                if (data.type === 'hairnet_detection_result') {
+                if (data.type === 'comprehensive_detection_result') {
+                    this.handleComprehensiveRealtimeResult(data);
+                } else if (data.type === 'hairnet_detection_result') {
                     this.handleHairnetRealtimeResult(data);
                 } else if (data.type === 'detection_result') {
                     this.handleRealtimeResult(data);
@@ -1340,6 +1368,172 @@ class HumanDetectionApp {
             <h4>🎯 标注结果图片</h4>
             <img src="${imageData}" class="result-image" alt="标注结果图片" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         `;
+    }
+
+    // 处理综合检测的实时结果
+    handleComprehensiveRealtimeResult(data) {
+        const result = data.result;
+
+        // 更新统计信息
+        const stats = result.statistics;
+        const humanCount = stats.human_count || 0;
+        const hairnetCount = stats.hairnet_count || 0;
+        const handwashCount = stats.handwash_count || 0;
+        const sanitizeCount = stats.sanitize_count || 0;
+
+        // 绘制检测框
+        this.drawComprehensiveDetections(result.detections || []);
+
+        // 更新实时结果显示
+        this.realtimeResult.innerHTML = `
+            <div class="detection-info">
+                <div class="info-card">
+                    <div class="info-value">${humanCount}</div>
+                    <div class="info-label">检测到人数</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-value">${hairnetCount}</div>
+                    <div class="info-label">佩戴发网</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-value">${handwashCount}</div>
+                    <div class="info-label">洗手行为</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-value">${sanitizeCount}</div>
+                    <div class="info-label">消毒行为</div>
+                </div>
+            </div>
+            <div class="behavior-details">
+                ${this.generateBehaviorDetails(result.detections || [])}
+            </div>
+        `;
+    }
+
+    // 生成行为检测详情
+    generateBehaviorDetails(detections) {
+        if (!detections || detections.length === 0) {
+            return '<div class="no-detections">暂无检测结果</div>';
+        }
+
+        return detections.map((detection, index) => {
+            const behaviors = [];
+
+            if (detection.hairnet_detection) {
+                const hairnet = detection.hairnet_detection;
+                const status = hairnet.has_hairnet ? '✅ 已佩戴' : '❌ 未佩戴';
+                behaviors.push(`发网: ${status} (${(hairnet.confidence * 100).toFixed(1)}%)`);
+            }
+
+            if (detection.handwash_detection) {
+                const handwash = detection.handwash_detection;
+                const status = handwash.is_handwashing ? '🧼 正在洗手' : '⏸️ 未洗手';
+                behaviors.push(`洗手: ${status} (${(handwash.confidence * 100).toFixed(1)}%)`);
+            }
+
+            if (detection.sanitize_detection) {
+                const sanitize = detection.sanitize_detection;
+                const status = sanitize.is_sanitizing ? '🧴 正在消毒' : '⏸️ 未消毒';
+                behaviors.push(`消毒: ${status} (${(sanitize.confidence * 100).toFixed(1)}%)`);
+            }
+
+            return `
+                <div class="person-behavior">
+                    <strong>人员 ${index + 1}:</strong>
+                    <div class="behavior-list">
+                        ${behaviors.map(b => `<span class="behavior-item">${b}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 绘制综合检测结果
+    drawComprehensiveDetections(detections) {
+        const canvas = this.canvasOverlay;
+        const ctx = canvas.getContext('2d');
+        const video = this.videoElement;
+
+        // 清空画布
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!detections || detections.length === 0) {
+            return;
+        }
+
+        // 计算缩放比例
+        const scaleX = canvas.width / video.videoWidth;
+        const scaleY = canvas.height / video.videoHeight;
+
+        detections.forEach((detection, index) => {
+            const bbox = detection.bbox;
+            if (!bbox || bbox.length !== 4) return;
+
+            const [x1, y1, x2, y2] = bbox;
+
+            // 缩放坐标
+            const scaledX1 = x1 * scaleX;
+            const scaledY1 = y1 * scaleY;
+            const scaledX2 = x2 * scaleX;
+            const scaledY2 = y2 * scaleY;
+
+            // 确定检测框颜色
+            let color = '#00ff00'; // 默认绿色
+            let labels = [];
+
+            // 发网检测
+            if (detection.hairnet_detection) {
+                const hairnet = detection.hairnet_detection;
+                if (!hairnet.has_hairnet) {
+                    color = '#ff0000'; // 红色表示未佩戴发网
+                }
+                const status = hairnet.has_hairnet ? '✅' : '❌';
+                labels.push(`${status} 发网 ${(hairnet.confidence * 100).toFixed(1)}%`);
+            }
+
+            // 洗手检测
+            if (detection.handwash_detection) {
+                const handwash = detection.handwash_detection;
+                if (handwash.is_handwashing) {
+                    const status = '🧼 洗手';
+                    labels.push(`${status} ${(handwash.confidence * 100).toFixed(1)}%`);
+                }
+            }
+
+            // 消毒检测
+            if (detection.sanitize_detection) {
+                const sanitize = detection.sanitize_detection;
+                if (sanitize.is_sanitizing) {
+                    const status = '🧴 消毒';
+                    labels.push(`${status} ${(sanitize.confidence * 100).toFixed(1)}%`);
+                }
+            }
+
+            // 绘制检测框
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(scaledX1, scaledY1, scaledX2 - scaledX1, scaledY2 - scaledY1);
+
+            // 绘制标签
+            if (labels.length > 0) {
+                ctx.font = '14px Arial';
+                let yOffset = scaledY1 - 10;
+
+                labels.forEach(label => {
+                    const textWidth = ctx.measureText(label).width;
+
+                    // 绘制标签背景
+                    ctx.fillStyle = color;
+                    ctx.fillRect(scaledX1, yOffset - 20, textWidth + 10, 20);
+
+                    // 绘制标签文字
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText(label, scaledX1 + 5, yOffset - 5);
+
+                    yOffset -= 25;
+                });
+            }
+        });
     }
 }
 

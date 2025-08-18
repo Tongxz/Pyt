@@ -13,7 +13,7 @@ if ! python -c "import ultralytics" &> /dev/null; then
 fi
 
 # 设置默认参数
-WEIGHTS="models/hairnet_detection.pt"
+WEIGHTS="models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt"
 SOURCE=""
 CONF_THRES=0.25
 IOU_THRES=0.45
@@ -66,7 +66,7 @@ while [[ $# -gt 0 ]]; do
         --help)
             echo "用法: ./start_testing.sh [选项]"
             echo "选项:"
-            echo "  --weights FILE     模型权重路径，默认为models/hairnet_detection.pt"
+            echo "  --weights FILE     模型权重路径，默认为models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt"
             echo "  --source PATH      输入源，可以是图像、视频路径或摄像头编号(0)"
             echo "  --conf-thres N     置信度阈值，默认为0.25"
             echo "  --iou-thres N      IoU阈值，默认为0.45"

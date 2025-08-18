@@ -1,3 +1,7 @@
+"""FastAPI应用程序入口点.
+
+这个模块包含了FastAPI应用程序的主要配置和路由设置.
+"""
 import logging
 import os
 import sys
@@ -12,7 +16,13 @@ project_root = os.path.dirname(
 )
 sys.path.append(project_root)
 
-from src.api.routers import comprehensive, region_management, statistics, websocket
+from src.api.routers import (
+    comprehensive,
+    download,
+    region_management,
+    statistics,
+    websocket,
+)
 from src.services import detection_service, region_service, websocket_service
 
 logging.basicConfig(level=logging.INFO)
@@ -36,11 +46,13 @@ app.add_middleware(
 
 @app.get("/health")
 async def health_check():
+    """健康检查端点."""
     return {"status": "healthy"}
 
 
 @app.on_event("startup")
 async def startup_event():
+    """应用程序启动事件."""
     logger.info("Starting up the application...")
     # Initialize services
     detection_service.initialize_detection_services()
@@ -58,12 +70,14 @@ app.include_router(
 )
 app.include_router(websocket.router, prefix="/ws", tags=["WebSocket"])
 app.include_router(statistics.router, prefix="/api/v1", tags=["Statistics"])
+app.include_router(download.router, prefix="/api/v1/download", tags=["Download"])
 
 from fastapi.responses import RedirectResponse
 
 
 @app.get("/", include_in_schema=False)
 async def root():
+    """根路径端点."""
     return RedirectResponse(url="/frontend/index.html")
 
 

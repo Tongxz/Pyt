@@ -7,7 +7,7 @@
 
 用法:
     python examples/use_yolo_hairnet_detector.py --image path/to/image.jpg
-    python examples/use_yolo_hairnet_detector.py --image path/to/image.jpg --model models/hairnet_detection.pt
+    python examples/use_yolo_hairnet_detector.py --image path/to/image.jpg --model models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt
 """
 
 import argparse
@@ -32,8 +32,8 @@ def parse_args():
     parser.add_argument(
         "--model",
         type=str,
-        default="models/hairnet_detection.pt",
-        help="YOLOv8 模型路径，默认为 models/hairnet_detection.pt",
+        default="models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt",
+        help="YOLOv8 模型路径，默认为 models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt",
     )
     parser.add_argument("--conf-thres", type=float, default=0.25, help="置信度阈值，默认为 0.25")
     parser.add_argument(

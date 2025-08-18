@@ -7,6 +7,9 @@ import torch
 import torch.nn as nn
 from ultralytics import YOLO
 
+# 导入统一参数配置
+from src.config.unified_params import get_unified_params
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,22 +19,41 @@ class HumanDetector:
     基于YOLOv8的人体检测模块，支持实时检测和批量处理
     """
 
-    def __init__(self, model_path: str = "yolov8s.pt", device: str = "auto"):
+    def __init__(self, model_path: Optional[str] = None, device: str = "auto"):
         """
         初始化人体检测器
 
         Args:
-            model_path: YOLO模型路径
+            model_path: YOLO模型路径，如果为None则使用统一配置
             device: 计算设备 ('cpu', 'cuda', 'auto')
         """
+        # 获取统一参数配置
+        self.params = get_unified_params().human_detection
+
+        # 使用统一配置或传入参数
+        if model_path is None:
+            model_path = self.params.model_path
+        if device == "auto":
+            device = self.params.device
+
         self.device = self._get_device(device)
         self.model = self._load_model(model_path)
-        self.confidence_threshold = 0.3  # 提高置信度阈值，减少误检测
-        self.iou_threshold = 0.5  # 提高IoU阈值，更严格的重叠抑制
-        self.min_box_area = 800  # 提高最小检测框面积，过滤小目标
-        self.max_box_ratio = 6.0  # 放宽最大宽高比限制
 
-        logger.info(f"HumanDetector initialized on {self.device}")
+        # 使用统一参数配置
+        self.confidence_threshold = self.params.confidence_threshold
+        self.iou_threshold = self.params.iou_threshold
+        self.min_box_area = self.params.min_box_area
+        self.max_box_ratio = self.params.max_box_ratio
+        self.min_width = self.params.min_width
+        self.min_height = self.params.min_height
+        self.nms_threshold = self.params.nms_threshold
+        self.max_detections = self.params.max_detections
+
+        logger.info(
+            f"HumanDetector initialized on {self.device} with unified params: "
+            f"conf={self.confidence_threshold}, iou={self.iou_threshold}, "
+            f"min_area={self.min_box_area}"
+        )
 
     def _get_device(self, device: str) -> str:
         """获取计算设备"""
@@ -106,9 +128,9 @@ class HumanDetector:
                             if (
                                 area >= self.min_box_area
                                 and aspect_ratio <= self.max_box_ratio
-                                and width > 20
-                                and height > 40
-                            ):  # 降低人体最小尺寸要求，避免过度过滤
+                                and width > self.min_width
+                                and height > self.min_height
+                            ):  # 使用配置的最小尺寸要求
                                 detection = {
                                     "bbox": [int(x1), int(y1), int(x2), int(y2)],
                                     "confidence": confidence,

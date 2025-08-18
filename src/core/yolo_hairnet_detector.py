@@ -37,7 +37,7 @@ class YOLOHairnetDetector:
 
     def __init__(
         self,
-        model_path: str = "models/hairnet_detection.pt",
+        model_path: str = "models/hairnet_detection/hairnet_detection.pt",
         device: str = "auto",
         conf_thres: float = 0.25,
         iou_thres: float = 0.45,
@@ -46,7 +46,7 @@ class YOLOHairnetDetector:
         初始化 YOLOv8 发网检测器
 
         Args:
-            model_path: YOLOv8 模型路径，默认为 'models/hairnet_detection.pt'
+            model_path: YOLOv8 模型路径，默认为 'models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt'
             device: 计算设备，可选 'cpu', 'cuda', 'auto'
             conf_thres: 置信度阈值，默认为 0.25
             iou_thres: IoU 阈值，默认为 0.45
@@ -277,7 +277,7 @@ class YOLOHairnetDetector:
                 image_array = image
 
             # 使用基础detect方法获取发网检测结果
-            result = self.detect(image_array)
+            result = self.detect(image_array)  # type: ignore
 
             if result.get("error"):
                 # 如果检测失败，返回默认结果

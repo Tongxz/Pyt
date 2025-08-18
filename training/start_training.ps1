@@ -8,7 +8,7 @@ param(
     [int]$Epochs = 100,
     [int]$BatchSize = 16,
     [int]$ImgSize = 640,
-    [string]$Weights = "yolov8m.pt",
+    [string]$Weights = "models/yolo/yolov8m.pt",
     [string]$Device = "",
     [switch]$Help
 )
@@ -20,7 +20,7 @@ if ($Help) {
     Write-Host "  -Epochs N        Number of training epochs, default is 100"
     Write-Host "  -BatchSize N     Batch size, default is 16"
     Write-Host "  -ImgSize N       Image size, default is 640"
-    Write-Host "  -Weights FILE    Initial weights, default is yolov8m.pt"
+    Write-Host "  -Weights FILE    Initial weights, default is models/yolo/yolov8m.pt"
     Write-Host "  -Device STR      Training device, e.g. cuda:0 or cpu"
     Write-Host "  -Help            Show this help information"
     exit 0
@@ -116,9 +116,9 @@ Write-Host ""
 # Check training results
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Training completed!" -ForegroundColor Green
-    Write-Host "Model saved at: models/hairnet_detection.pt"
+    Write-Host "Model saved at: models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt"
     Write-Host "Use the following command to test the model:" -ForegroundColor Yellow
-    Write-Host "python test_hairnet_model.py --weights models/hairnet_detection.pt --source path/to/test/image.jpg --view-img"
+    Write-Host "python test_hairnet_model.py --weights models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt --source path/to/test/image.jpg --view-img"
 } else {
     Write-Host "Training failed, please check error messages" -ForegroundColor Red
     exit 1

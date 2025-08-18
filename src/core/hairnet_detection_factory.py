@@ -69,7 +69,9 @@ class HairnetDetectionFactory:
 
         # 确保 model_path 不为 None
         if model_path is None:
-            model_path = "models/hairnet_detection.pt"
+            model_path = (
+                "models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt"
+            )
             logger.warning(f"未指定模型路径，使用默认路径: {model_path}")
 
         # 检查模型文件是否存在

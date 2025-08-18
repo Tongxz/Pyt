@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @router.post("/comprehensive", summary="综合检测接口")
 async def detect_comprehensive(
     file: UploadFile = File(...),
+    record_process: str = "false",
     optimized_pipeline: Optional[OptimizedDetectionPipeline] = Depends(
         get_optimized_pipeline
     ),
@@ -33,11 +34,21 @@ async def detect_comprehensive(
     contents = await file.read()
 
     try:
+        # 转换record_process参数
+        # 临时强制启用录制模式用于测试
+        should_record = True  # 强制启用录制模式
+        # should_record = record_process.lower() == "true"  # 原始逻辑
+
+        logger.info(
+            f"开始综合检测: {file.filename}, 文件大小: {len(contents)} bytes, 录制模式: {should_record}"
+        )
+
         result = comprehensive_detection_logic(
             contents=contents,
             filename=file.filename,
             optimized_pipeline=optimized_pipeline,
             hairnet_pipeline=hairnet_pipeline,
+            record_process=should_record,
         )
         return result
     except Exception as e:

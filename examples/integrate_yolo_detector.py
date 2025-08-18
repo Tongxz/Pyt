@@ -44,8 +44,8 @@ def parse_args():
     parser.add_argument(
         "--model",
         type=str,
-        default="models/hairnet_detection.pt",
-        help="YOLOv8 模型路径，默认为 models/hairnet_detection.pt",
+        default="models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt",
+        help="YOLOv8 模型路径，默认为 models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt",
     )
     parser.add_argument("--conf-thres", type=float, default=0.25, help="置信度阈值，默认为 0.25")
     parser.add_argument("--iou-thres", type=float, default=0.45, help="IoU阈值，默认为 0.45")

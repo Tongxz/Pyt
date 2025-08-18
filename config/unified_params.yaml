@@ -1,0 +1,55 @@
+behavior_recognition:
+  confidence_threshold: 0.6
+  hairnet_min_duration: 1.0
+  hairnet_stability_frames: 5
+  handwashing_max_duration: 60.0
+  handwashing_min_duration: 3.0
+  handwashing_stability_frames: 8
+  history_maxlen: 30
+  max_num_hands: 2
+  min_detection_confidence: 0.5
+  min_tracking_confidence: 0.5
+  sanitizing_max_duration: 30.0
+  sanitizing_min_duration: 2.0
+  sanitizing_stability_frames: 5
+  use_advanced_detection: true
+  use_mediapipe: true
+hairnet_detection:
+  confidence_boost_factor: 1.2
+  confidence_threshold: 0.6
+  contour_area_threshold: 50
+  device: auto
+  edge_density_threshold: 0.006
+  input_size:
+    - 224
+    - 224
+  light_blue_ratio_threshold: 0.001
+  light_color_ratio_threshold: 0.003
+  min_contour_count: 2
+  model_path: null
+  sensitive_edge_threshold: 0.008
+  total_score_threshold: 0.8
+  upper_edge_density_threshold: 0.008
+  upper_region_ratio: 0.4
+  white_ratio_threshold: 0.002
+human_detection:
+  confidence_threshold: 0.3
+  device: auto
+  iou_threshold: 0.5
+  max_box_ratio: 6.0
+  max_detections: 10
+  min_box_area: 800
+  min_height: 50
+  min_width: 25
+  model_path: models/yolo/yolov8s.pt
+  nms_threshold: 0.4
+system:
+  api_timeout: 30.0
+  batch_size: 1
+  cache_size: 100
+  cache_ttl: 300
+  debug_mode: false
+  enable_cache: true
+  log_level: INFO
+  max_request_size: 10485760
+  max_workers: 4

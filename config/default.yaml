@@ -41,13 +41,13 @@ behavior:
     - hairnet_detection
     - handwash_detection
     - sanitize_detection
-  
+
   # 行为检测阈值
   thresholds:
     hairnet_detection: 0.7
     handwash_detection: 0.6
     sanitize_detection: 0.6
-  
+
   # 行为持续时间要求（秒）
   duration_requirements:
     handwash_detection: 20
@@ -61,12 +61,12 @@ regions:
       type: "entrance"
       required_behaviors: ["hairnet_detection"]
       max_capacity: 10
-    
+
     - name: "洗手区域"
       type: "handwash_area"
       required_behaviors: ["handwash_detection"]
       max_capacity: 5
-    
+
     - name: "消毒区域"
       type: "sanitize_area"
       required_behaviors: ["sanitize_detection"]
@@ -76,28 +76,28 @@ regions:
 models:
   # YOLO模型
   yolo:
-    model_path: "models/yolov8n.pt"
-    device: "auto"  # auto, cpu, cuda
+    model_path: "models/yolo/yolov8n.pt"
+    device: "auto" # auto, cpu, cuda
     half_precision: false
-  
+
   # 姿态估计模型
   pose:
     model_path: "models/pose_estimation.pt"
     device: "auto"
     keypoints: 17
-  
+
   # 发网检测模型
   hairnet:
-    model_path: "models/hairnet_detection.pt"
+    model_path: "models/hairnet_detection/hairnet_detection.pt"
     device: "auto"
     confidence_threshold: 0.7
-  
+
   # 洗手检测模型
   handwash:
     model_path: "models/handwash_detection.pt"
     device: "auto"
     confidence_threshold: 0.6
-  
+
   # 消毒检测模型
   sanitize:
     model_path: "models/sanitize_detection.pt"
@@ -111,7 +111,7 @@ cameras:
     resolution: [1280, 720]
     fps: 30
     buffer_size: 1
-  
+
   # 摄像头源列表
   sources:
     - id: "camera_01"
@@ -120,7 +120,7 @@ cameras:
       source_path: "0"
       enabled: true
       regions: ["entrance"]
-    
+
     - id: "camera_02"
       name: "洗手区摄像头"
       source_type: "rtsp"
@@ -134,18 +134,18 @@ api:
   port: 5000
   debug: false
   cors_enabled: true
-  max_content_length: 16777216  # 16MB
-  
+  max_content_length: 16777216 # 16MB
+
   # 认证配置
   auth:
     enabled: false
-    secret_key: "your-secret-key-here"
-    token_expiration: 3600  # 1小时
+    secret_key: "your-secret-key-here" # pragma: allowlist secret
+    token_expiration: 3600 # 1小时
 
 # 数据库配置
 database:
   enabled: false
-  type: "sqlite"  # sqlite, postgresql, mysql
+  type: "sqlite" # sqlite, postgresql, mysql
   connection:
     sqlite:
       path: "data/detection_records.db"
@@ -154,7 +154,7 @@ database:
       port: 5432
       database: "behavior_detection"
       username: "user"
-      password: "password"
+      password: "password" # pragma: allowlist secret
 
 # 存储配置
 storage:
@@ -166,15 +166,15 @@ storage:
   model_dir: "models"
   # 配置目录
   config_dir: "config"
-  
+
   # 录像配置
   recording:
     enabled: false
     format: "mp4"
-    quality: "medium"  # low, medium, high
-    max_duration: 3600  # 1小时
-    max_file_size: 1073741824  # 1GB
-  
+    quality: "medium" # low, medium, high
+    max_duration: 3600 # 1小时
+    max_file_size: 1073741824 # 1GB
+
   # 截图配置
   screenshots:
     enabled: true
@@ -186,16 +186,16 @@ storage:
 # 通知配置
 notifications:
   enabled: false
-  
+
   # 邮件通知
   email:
     enabled: false
     smtp_server: "smtp.gmail.com"
     smtp_port: 587
     username: "your-email@gmail.com"
-    password: "your-password"
+    password: "your-password" # pragma: allowlist secret
     recipients: ["admin@company.com"]
-  
+
   # Webhook通知
   webhook:
     enabled: false
@@ -208,12 +208,12 @@ performance:
   threading:
     max_workers: 4
     queue_size: 100
-  
+
   # 内存管理
   memory:
     max_cache_size: 1000
-    cleanup_interval: 300  # 5分钟
-  
+    cleanup_interval: 300 # 5分钟
+
   # GPU配置
   gpu:
     enabled: true

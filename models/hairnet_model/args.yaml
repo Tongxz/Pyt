@@ -1,6 +1,6 @@
 task: detect
 mode: train
-model: models/hairnet_detection.pt
+model: models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt
 data: datasets/hairnet/data.yaml
 epochs: 150
 time: null

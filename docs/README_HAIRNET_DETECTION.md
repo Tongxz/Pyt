@@ -12,6 +12,46 @@
 - `start_testing.sh`: 测试模型的快速启动脚本
 - `README_TRAINING.md`: 详细的训练指南
 
+## 数据集管理
+
+### 当前数据集状况
+
+根据分析，当前数据集结构如下：
+- **训练集 (train)**: 约200+个样本，包含标注文件
+- **验证集 (valid)**: 约30+个样本，包含标注文件
+- **测试集 (test)**: 约17个样本，包含标注文件
+- **类别**: 3个类别 - `hairnet`(发网), `head`(头部), `person`(人员)
+
+### 扩展数据集
+
+#### 使用自动化脚本 (推荐)
+
+```bash
+python add_dataset.py
+```
+
+脚本提供以下功能：
+- **查看统计**: 显示当前数据集的详细统计信息
+- **添加数据**: 自动添加新的图片和YOLO格式标注文件
+- **格式转换**: 将LabelMe JSON格式转换为YOLO格式
+- **验证检查**: 自动验证标注文件格式的正确性
+
+#### 准备新数据
+
+**选项A: 已有YOLO格式标注**
+```
+新数据目录/
+├── images/
+│   ├── image1.jpg
+│   └── image2.jpg
+└── labels/
+    ├── image1.txt
+    └── image2.txt
+```
+
+**选项B: LabelMe JSON格式**
+脚本支持自动转换LabelMe标注格式
+
 ## 快速开始
 
 ### 1. 准备数据集
@@ -33,7 +73,7 @@ python prepare_roboflow_dataset.py --input /path/to/roboflow_dataset.zip --outpu
 或者使用更多参数：
 
 ```bash
-./start_training.sh --epochs 200 --batch-size 8 --img-size 640 --weights yolov8s.pt --device cuda:0
+./start_training.sh --epochs 200 --batch-size 8 --img-size 640 --weights models/yolo/yolov8s.pt --device cuda:0
 ```
 
 ### 3. 测试模型
@@ -47,7 +87,7 @@ python prepare_roboflow_dataset.py --input /path/to/roboflow_dataset.zip --outpu
 或者使用更多参数：
 
 ```bash
-./start_testing.sh --weights models/hairnet_detection.pt --source path/to/video.mp4 --conf-thres 0.3 --view-img
+./start_testing.sh --weights models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt --source path/to/video.mp4 --conf-thres 0.3 --view-img
 ```
 
 ### 4. 在代码中使用模型
@@ -64,7 +104,7 @@ python example_usage.py --source path/to/image.jpg
 from ultralytics import YOLO
 
 # 加载模型
-model = YOLO('models/hairnet_detection.pt')
+model = YOLO('models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt')
 
 # 运行推理
 results = model('path/to/image.jpg')

@@ -31,30 +31,30 @@ log_error() {
 # 检查系统要求
 check_requirements() {
     log_info "检查系统要求..."
-    
+
     # 检查Python版本
     if ! command -v python3 &> /dev/null; then
         log_error "Python 3 未安装"
         exit 1
     fi
-    
+
     python_version=$(python3 --version | cut -d" " -f2 | cut -d"." -f1,2)
     required_version="3.8"
-    
+
     if [ "$(printf '%s\n' "$required_version" "$python_version" | sort -V | head -n1)" != "$required_version" ]; then
         log_error "Python 版本需要 >= 3.8，当前版本: $python_version"
         exit 1
     fi
-    
+
     log_success "Python 版本检查通过: $python_version"
-    
+
     # 检查Docker
     if command -v docker &> /dev/null; then
         log_success "Docker 已安装"
     else
         log_warning "Docker 未安装，将跳过Docker相关设置"
     fi
-    
+
     # 检查Git
     if command -v git &> /dev/null; then
         log_success "Git 已安装"
@@ -67,17 +67,17 @@ check_requirements() {
 # 创建虚拟环境
 setup_venv() {
     log_info "设置Python虚拟环境..."
-    
+
     if [ ! -d "venv" ]; then
         python3 -m venv venv
         log_success "虚拟环境创建成功"
     else
         log_info "虚拟环境已存在"
     fi
-    
+
     # 激活虚拟环境
     source venv/bin/activate
-    
+
     # 升级pip
     pip install --upgrade pip
     log_success "pip 已升级到最新版本"
@@ -86,18 +86,18 @@ setup_venv() {
 # 安装依赖
 install_dependencies() {
     log_info "安装项目依赖..."
-    
+
     # 安装生产依赖
     pip install -r requirements.txt
     log_success "生产依赖安装完成"
-    
+
     # 安装开发依赖
     pip install pytest pytest-cov pytest-mock pytest-asyncio
     pip install black flake8 mypy isort bandit
     pip install pre-commit
     pip install sphinx sphinx-rtd-theme
     log_success "开发依赖安装完成"
-    
+
     # 安装项目包
     pip install -e .
     log_success "项目包安装完成"
@@ -106,7 +106,7 @@ install_dependencies() {
 # 设置Git hooks
 setup_git_hooks() {
     log_info "设置Git hooks..."
-    
+
     if [ -f ".pre-commit-config.yaml" ]; then
         pre-commit install
         log_success "Pre-commit hooks 安装完成"
@@ -118,7 +118,7 @@ setup_git_hooks() {
 # 创建必要的目录
 create_directories() {
     log_info "创建项目目录结构..."
-    
+
     directories=(
         "data/images"
         "data/videos"
@@ -132,18 +132,18 @@ create_directories() {
         "docs/_build"
         "notebooks"
     )
-    
+
     for dir in "${directories[@]}"; do
         mkdir -p "$dir"
     done
-    
+
     log_success "目录结构创建完成"
 }
 
 # 设置配置文件
 setup_config() {
     log_info "设置配置文件..."
-    
+
     # 创建本地配置文件
     if [ ! -f "config/local/local.yaml" ]; then
         cat > config/local/local.yaml << EOF
@@ -153,21 +153,21 @@ setup_config() {
 system:
   debug: true
   log_level: "DEBUG"
-  
+
 api:
   host: "0.0.0.0"
   port: 8000
   reload: true
-  
+
 database:
   url: "sqlite:///data/local.db"
-  
+
 redis:
   url: "redis://localhost:6379/0"
-  
+
 models:
-  yolo_model_path: "models/yolov8n.pt"
-  
+  yolo_model_path: "models/models/yolo/yolov8n.pt"
+
 cameras:
   default_camera:
     source: 0  # 使用默认摄像头
@@ -178,7 +178,7 @@ EOF
     else
         log_info "本地配置文件已存在"
     fi
-    
+
     # 创建环境变量文件
     if [ ! -f ".env" ]; then
         cat > .env << EOF
@@ -200,7 +200,7 @@ API_HOST=0.0.0.0
 API_PORT=8000
 
 # 模型配置
-MODEL_PATH=models/yolov8n.pt
+MODEL_PATH=models/models/yolo/yolov8n.pt
 
 # 安全配置
 SECRET_KEY=your-secret-key-here
@@ -215,16 +215,16 @@ EOF
 # 下载模型文件
 download_models() {
     log_info "下载预训练模型..."
-    
-    if [ ! -f "models/yolov8n.pt" ]; then
+
+    if [ ! -f "models/models/yolo/yolov8n.pt" ]; then
         log_info "下载 YOLOv8 nano 模型..."
         python -c "
 import urllib.request
 import os
 os.makedirs('models', exist_ok=True)
 urllib.request.urlretrieve(
-    'https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.pt',
-    'models/yolov8n.pt'
+    'https://github.com/ultralytics/assets/releases/download/v0.0.0/models/yolo/yolov8n.pt',
+    'models/models/yolo/yolov8n.pt'
 )
 print('YOLOv8 模型下载完成')
 "
@@ -237,7 +237,7 @@ print('YOLOv8 模型下载完成')
 # 运行测试
 run_tests() {
     log_info "运行初始测试..."
-    
+
     if pytest tests/unit/ -v --tb=short; then
         log_success "单元测试通过"
     else
@@ -249,14 +249,14 @@ run_tests() {
 setup_docker() {
     if command -v docker &> /dev/null; then
         log_info "设置Docker环境..."
-        
+
         # 构建开发镜像
         if docker build -f Dockerfile.dev -t hbd:dev . > /dev/null 2>&1; then
             log_success "Docker开发镜像构建完成"
         else
             log_warning "Docker镜像构建失败"
         fi
-        
+
         # 创建Docker网络
         if ! docker network ls | grep -q hbd-network; then
             docker network create hbd-network > /dev/null 2>&1
@@ -268,7 +268,7 @@ setup_docker() {
 # 生成开发文档
 generate_docs() {
     log_info "生成开发文档..."
-    
+
     if [ -d "docs" ]; then
         cd docs
         if command -v sphinx-build &> /dev/null; then
@@ -315,7 +315,7 @@ main() {
     echo "  Development Environment Setup"
     echo "======================================"
     echo
-    
+
     check_requirements
     setup_venv
     install_dependencies

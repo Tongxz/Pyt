@@ -41,14 +41,14 @@ def test_integrated_detection():
     test_image_path = "tests/fixtures/images/person/test_person.png"
     if not os.path.exists(test_image_path):
         print(f"错误: 未找到测试图像 '{test_image_path}'")
-        return False
+        assert False, f"测试图像不存在: {test_image_path}"
 
     try:
         # 加载测试图像
         image = cv2.imread(test_image_path)
         if image is None:
             print(f"错误: 无法加载图像 '{test_image_path}'")
-            return False
+            assert False, f"无法加载图像: {test_image_path}"
 
         print(f"成功加载测试图像: {image.shape}")
 
@@ -114,14 +114,14 @@ def test_integrated_detection():
             print("✓ 单独检测也使用了增强ROI算法")
 
         print("\n=== 测试完成 ===")
-        return True
+        # 测试通过，不需要返回值
 
     except Exception as e:
         print(f"测试过程中发生错误: {e}")
         import traceback
 
         traceback.print_exc()
-        return False
+        assert False, f"测试执行失败: {e}"
 
 
 def test_roi_comparison():

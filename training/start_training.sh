@@ -33,7 +33,7 @@ mkdir -p models
 EPOCHS=100
 BATCH_SIZE=16
 IMG_SIZE=640
-WEIGHTS="yolov8m.pt"
+WEIGHTS="models/yolo/yolov8m.pt"
 DEVICE=""
 
 # 解析命令行参数
@@ -71,7 +71,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --epochs N       训练轮数，默认为100"
             echo "  --batch-size N   批次大小，默认为16"
             echo "  --img-size N     图像大小，默认为640"
-            echo "  --weights FILE   初始权重，默认为yolov8n.pt"
+            echo "  --weights FILE   初始权重，默认为models/yolo/yolov8n.pt"
             echo "  --device STR     训练设备，例如cuda:0或cpu"
             echo "  --help           显示此帮助信息"
             exit 0
@@ -120,9 +120,9 @@ $COMMAND
 # 检查训练结果
 if [ $? -eq 0 ]; then
     echo "训练完成!"
-    echo "模型保存在: models/hairnet_detection.pt"
+    echo "模型保存在: models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt"
     echo "使用以下命令测试模型:"
-    echo "python test_hairnet_model.py --weights models/hairnet_detection.pt --source path/to/test/image.jpg --view-img"
+    echo "python test_hairnet_model.py --weights models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt --source path/to/test/image.jpg --view-img"
 else
     echo "训练失败，请检查错误信息"
 fi

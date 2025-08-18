@@ -17,7 +17,7 @@
   ./start_testing.sh [选项]
   ```
 - **支持参数**:
-  - `--weights FILE`: 模型权重文件（默认models/hairnet_detection.pt）
+  - `--weights FILE`: 模型权重文件（默认models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt）
   - `--source PATH`: 输入源（图片/视频路径或摄像头ID）
   - `--conf-thres N`: 置信度阈值（默认0.25）
   - `--iou-thres N`: IoU阈值（默认0.45）
@@ -47,7 +47,7 @@
 
 ### 1. 模型文件
 确保有可用的训练模型：
-- `models/hairnet_detection.pt` - 主模型文件
+- `models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt` - 主模型文件
 - `models/hairnet_model/weights/best.pt` - 训练生成的最佳模型
 
 ### 2. 测试数据

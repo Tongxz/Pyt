@@ -143,11 +143,11 @@ if !errorlevel! neq 0 (
     exit /b 1
 )
 
-REM 检查 yolov8m.pt 是否存在
+REM 检查 models/yolo/yolov8m.pt 是否存在
 echo [INFO] 检查 YOLO 模型文件...
-if not exist yolov8m.pt (
-    echo [INFO] 正在下载 yolov8m.pt 权重文件...
-    !PYTHON_CMD! -c "from ultralytics import YOLO; YOLO('yolov8m.pt')"
+if not exist models/yolo/yolov8m.pt (
+    echo [INFO] 正在下载 models/yolo/yolov8m.pt 权重文件...
+    !PYTHON_CMD! -c "from ultralytics import YOLO; YOLO('models/yolo/yolov8m.pt')"
     if !errorlevel! neq 0 (
         echo [WARNING] YOLO模型下载失败，服务启动时会自动下载
     )

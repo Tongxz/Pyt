@@ -312,7 +312,7 @@ class TestPersonDetector:
     @pytest.fixture
     def detector(self):
         """创建检测器实例。"""
-        return PersonDetector("models/yolov8n.pt")
+        return PersonDetector("models/models/yolo/yolov8n.pt")
 
     @pytest.fixture
     def sample_image(self):

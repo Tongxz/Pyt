@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -167,7 +166,7 @@
             accent-color: #667eea;
         }
 
-        .checkbox-option input[type="checkbox"]:checked+.checkbox-label {
+        .checkbox-option input[type="checkbox"]:checked + .checkbox-label {
             color: #667eea;
             font-weight: 600;
         }
@@ -225,7 +224,7 @@
             accent-color: #667eea;
         }
 
-        .radio-option input[type="radio"]:checked+.radio-label {
+        .radio-option input[type="radio"]:checked + .radio-label {
             color: #667eea;
             font-weight: 600;
         }
@@ -319,7 +318,7 @@
             color: white;
             font-size: 18px;
             font-weight: 600;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
         .image-controls {
@@ -343,7 +342,7 @@
         .image-controls .btn-secondary:hover {
             background: rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         .image-wrapper {
@@ -351,7 +350,7 @@
             background: white;
             border-radius: 12px;
             padding: 15px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
         .result-image.enhanced-annotation {
@@ -364,7 +363,7 @@
 
         .result-image.enhanced-annotation:hover {
             transform: scale(1.02);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         }
 
         .result-image.fullscreen {
@@ -378,7 +377,7 @@
             background: white;
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
 
         .image-overlay {
@@ -409,7 +408,7 @@
             width: 12px;
             height: 12px;
             border-radius: 2px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255,255,255,0.3);
         }
 
         .legend-color.compliant {
@@ -433,7 +432,6 @@
                 transform: translateX(100%);
                 opacity: 0;
             }
-
             to {
                 transform: translateX(0);
                 opacity: 1;
@@ -445,7 +443,6 @@
                 transform: translateX(0);
                 opacity: 1;
             }
-
             to {
                 transform: translateX(100%);
                 opacity: 0;
@@ -601,6 +598,70 @@
             color: #155724;
         }
 
+        /* 行为检测详情样式 */
+        .behavior-details {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .person-behavior {
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+
+        .person-behavior:last-child {
+            margin-bottom: 0;
+        }
+
+        .behavior-list {
+            margin-top: 0.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .behavior-item {
+            display: inline-block;
+            padding: 0.3rem 0.6rem;
+            background: #e9ecef;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .behavior-item:contains('✅') {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .behavior-item:contains('❌') {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .behavior-item:contains('🧼') {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .behavior-item:contains('🧴') {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .no-detections {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 1rem;
+        }
+
         .compliance.warning {
             background: #fff3cd;
             color: #856404;
@@ -645,13 +706,8 @@
         }
 
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .controls {
@@ -714,7 +770,7 @@
             margin: 0;
             font-size: 18px;
             font-weight: 600;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
         .download-info {
@@ -739,7 +795,7 @@
         .download-btn:hover {
             background: rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
         }
 
         @media (max-width: 768px) {
@@ -758,7 +814,6 @@
         }
     </style>
 </head>
-
 <body>
     <div class="header">
         <h1>🤖 人体行为检测系统</h1>
@@ -785,31 +840,25 @@
             <!-- 综合检测说明 -->
             <div class="detection-info-section">
                 <h3 style="text-align: center; margin-bottom: 1rem; color: #333; font-size: 1.1rem;">🔍 综合检测功能</h3>
-                <div class="detection-features"
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; text-align: center;">
-                    <div class="feature-item"
-                        style="padding: 0.5rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                <div class="detection-features" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; text-align: center;">
+                    <div class="feature-item" style="padding: 0.5rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
                         <span style="font-size: 1.2rem;">👥</span>
                         <div style="font-size: 0.85rem; color: #666;">人体检测</div>
                     </div>
-                    <div class="feature-item"
-                        style="padding: 0.5rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                    <div class="feature-item" style="padding: 0.5rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
                         <span style="font-size: 1.2rem;">🧢</span>
                         <div style="font-size: 0.85rem; color: #666;">发网检测</div>
                     </div>
-                    <div class="feature-item"
-                        style="padding: 0.5rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                    <div class="feature-item" style="padding: 0.5rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
                         <span style="font-size: 1.2rem;">🧼</span>
                         <div style="font-size: 0.85rem; color: #666;">洗手检测</div>
                     </div>
-                    <div class="feature-item"
-                        style="padding: 0.5rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                    <div class="feature-item" style="padding: 0.5rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
                         <span style="font-size: 1.2rem;">🧴</span>
                         <div style="font-size: 0.85rem; color: #666;">消毒检测</div>
                     </div>
                 </div>
-                <p style="text-align: center; color: #666; font-size: 0.9rem; margin: 0;">一次检测，全面分析 -
-                    自动识别人体、发网佩戴、洗手和消毒行为</p>
+                <p style="text-align: center; color: #666; font-size: 0.9rem; margin: 0;">一次检测，全面分析 - 自动识别人体、发网佩戴、洗手和消毒行为</p>
             </div>
 
             <div class="upload-area" id="uploadArea">
@@ -877,5 +926,4 @@
 
     <script src="/frontend/app.js"></script>
 </body>
-
 </html>

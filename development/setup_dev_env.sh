@@ -235,7 +235,7 @@ fi
 
 # 设置环境变量
 export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
-export HAIRNET_MODEL_PATH="models/hairnet_detection.pt"
+export HAIRNET_MODEL_PATH="models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt"
 
 echo "启动后端API服务器..."
 python src/api/app.py
@@ -272,7 +272,7 @@ show_usage() {
     echo ""
     echo "2. 启动后端服务器:"
     echo "   ./start_dev_server.sh"
-    echo "   或者: HAIRNET_MODEL_PATH=models/hairnet_detection.pt python src/api/app.py"
+    echo "   或者: HAIRNET_MODEL_PATH=models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt python src/api/app.py"
     echo ""
     echo "3. 启动前端服务器:"
     echo "   ./start_frontend.sh"

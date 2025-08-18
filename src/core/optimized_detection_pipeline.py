@@ -19,6 +19,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
+from src.core.pose_detector import PoseDetector
+
 logger = logging.getLogger(__name__)
 
 
@@ -613,7 +615,149 @@ class OptimizedDetectionPipeline:
                     1,
                 )
 
-            # 可以继续添加洗手和消毒的可视化...
+            # 绘制洗手检测结果
+            for result in handwash_results:
+                if result.get("is_handwashing", False):
+                    person_bbox = result.get("person_bbox", [0, 0, 0, 0])
+                    x1, y1, x2, y2 = map(int, person_bbox)
+                    # 在人体框上方绘制洗手标签
+                    cv2.putText(
+                        annotated,
+                        "Handwashing ✓",
+                        (x1, y1 - 30),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        (255, 0, 255),  # 紫色
+                        2,
+                    )
+
+            # 绘制消毒检测结果
+            for result in sanitize_results:
+                if result.get("is_sanitizing", False):
+                    person_bbox = result.get("person_bbox", [0, 0, 0, 0])
+                    x1, y1, x2, y2 = map(int, person_bbox)
+                    # 在人体框上方绘制消毒标签
+                    cv2.putText(
+                        annotated,
+                        "Sanitizing ✓",
+                        (x1, y1 - 50),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        (255, 255, 0),  # 黄色
+                        2,
+                    )
+
+            # 只有在检测到人体时才检测并绘制手部关键点
+            hands_count = 0
+            if person_detections:
+                pose_detector = PoseDetector()
+                hands_results = pose_detector.detect_hands(image)
+                hands_count = len(hands_results)
+
+                # 绘制手部关键点
+                for hand_result in hands_results:
+                    landmarks = hand_result["landmarks"]
+                    hand_label = hand_result["label"]
+                    bbox = hand_result["bbox"]
+
+                    # 绘制手部边界框
+                    cv2.rectangle(
+                        annotated,
+                        (bbox[0], bbox[1]),
+                        (bbox[2], bbox[3]),
+                        (255, 255, 0),
+                        2,
+                    )  # 黄色边界框
+
+                    # 绘制手部标签
+                    cv2.putText(
+                        annotated,
+                        f"Hand: {hand_label}",
+                        (bbox[0], bbox[1] - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        (255, 255, 0),
+                        2,
+                    )
+
+                    # 绘制手部关键点
+                    h, w = image.shape[:2]
+                    for i, landmark in enumerate(landmarks):
+                        x = int(landmark["x"] * w)
+                        y = int(landmark["y"] * h)
+
+                        # 绘制关键点
+                        cv2.circle(annotated, (x, y), 3, (0, 255, 255), -1)  # 青色圆点
+
+                        # 为重要关键点添加标签
+                        if i in [4, 8, 12, 16, 20, 0]:  # MediaPipe手部关键点索引
+                            point_names = {
+                                0: "腕",
+                                4: "拇指",
+                                8: "食指",
+                                12: "中指",
+                                16: "无名指",
+                                20: "小指",
+                            }
+                            if i in point_names:
+                                cv2.putText(
+                                    annotated,
+                                    point_names[i],
+                                    (x + 5, y - 5),
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.3,
+                                    (0, 255, 255),
+                                    1,
+                                )
+
+                    # 绘制手部连接线
+                    if len(landmarks) >= 21:
+                        # 连接手腕到各指根部
+                        wrist = (int(landmarks[0]["x"] * w), int(landmarks[0]["y"] * h))
+                        finger_bases = [5, 9, 13, 17]
+                        for base_idx in finger_bases:
+                            if base_idx < len(landmarks):
+                                base = (
+                                    int(landmarks[base_idx]["x"] * w),
+                                    int(landmarks[base_idx]["y"] * h),
+                                )
+                                cv2.line(annotated, wrist, base, (0, 255, 255), 1)
+
+                        # 连接各指关节
+                        finger_connections = [
+                            [1, 2, 3, 4],  # 拇指
+                            [5, 6, 7, 8],  # 食指
+                            [9, 10, 11, 12],  # 中指
+                            [13, 14, 15, 16],  # 无名指
+                            [17, 18, 19, 20],  # 小指
+                        ]
+
+                        for finger in finger_connections:
+                            for j in range(len(finger) - 1):
+                                if finger[j] < len(landmarks) and finger[j + 1] < len(
+                                    landmarks
+                                ):
+                                    pt1 = (
+                                        int(landmarks[finger[j]]["x"] * w),
+                                        int(landmarks[finger[j]]["y"] * h),
+                                    )
+                                    pt2 = (
+                                        int(landmarks[finger[j + 1]]["x"] * w),
+                                        int(landmarks[finger[j + 1]]["y"] * h),
+                                    )
+                                    cv2.line(annotated, pt1, pt2, (0, 255, 255), 1)
+
+            # 在左上角显示帧信息
+            info_text = f"Persons: {len(person_detections)}, Hands: {hands_count}"
+            cv2.putText(
+                annotated,
+                info_text,
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 255, 255),
+                2,
+            )
 
         except Exception as e:
             logger.error(f"图像注释失败: {e}")
