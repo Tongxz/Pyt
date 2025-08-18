@@ -210,6 +210,7 @@ Thumbs.db
 *.tiff
 !docs/images/
 !assets/images/
+!tests/fixtures/images/
 
 # 模型权重文件
 *.pt
