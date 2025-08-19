@@ -169,8 +169,8 @@ logs/
 data/
 !data/.gitkeep
 
-# 模型文件
-models/
+# 模型文件 - 允许提交模型目录结构和配置文件
+# models/ - 已移除，允许提交模型目录
 !models/.gitkeep
 
 # 临时文件
@@ -213,7 +213,7 @@ Thumbs.db
 !tests/fixtures/images/
 
 # 模型权重文件
-*.pt
+# *.pt  # 允许提交.pt模型文件到版本控制
 *.pth
 *.onnx
 *.trt
