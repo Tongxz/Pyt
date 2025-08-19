@@ -14,10 +14,10 @@ router = APIRouter()
 @router.get("/statistics")
 def get_statistics(region_service: RegionService = Depends(get_region_service)):
     """获取统计信息.
-    
+
     Args:
         region_service: 区域服务依赖项
-        
+
     Returns:
         统计信息数据
     """
@@ -29,10 +29,10 @@ def get_statistics(region_service: RegionService = Depends(get_region_service)):
 @router.get("/violations")
 def get_violations(region_service: RegionService = Depends(get_region_service)):
     """获取违规记录.
-    
+
     Args:
         region_service: 区域服务依赖项
-        
+
     Returns:
         违规记录数据
     """
