@@ -290,25 +290,44 @@ class OptimizedDetectionPipeline:
         )
 
     def _detect_persons(self, image: np.ndarray) -> List[Dict]:
-        """人体检测 - 所有其他检测的基础"""
-        if self.human_detector is None:
-            logger.warning("人体检测器未初始化")
-            return []
+        """人体检测 - 所有其他检测的基础
 
-        try:
-            detections = self.human_detector.detect(image)
-            return detections if detections else []
-        except Exception as e:
-            logger.error(f"人体检测失败: {e}")
-            return []
+        Args:
+            image: 输入图像
+
+        Returns:
+            List[Dict]: 人体检测结果列表
+
+        Raises:
+            RuntimeError: 当人体检测器未初始化或检测失败时
+        """
+        if self.human_detector is None:
+            raise RuntimeError(
+                "人体检测器未初始化。请检查：\n" "1. 检测服务是否正确启动\n" "2. 人体检测模型文件是否存在\n" "3. 系统依赖是否完整"
+            )
+
+        detections = self.human_detector.detect(image)
+        return detections if detections else []
 
     def _detect_hairnet_for_persons(
         self, image: np.ndarray, person_detections: List[Dict]
     ) -> List[Dict]:
-        """为检测到的人员进行发网检测"""
+        """为检测到的人员进行发网检测
+
+        Args:
+            image: 输入图像
+            person_detections: 人体检测结果列表
+
+        Returns:
+            List[Dict]: 发网检测结果列表
+
+        Raises:
+            RuntimeError: 当发网检测器未初始化时
+        """
         if self.hairnet_detector is None:
-            logger.warning("发网检测器未初始化")
-            return []
+            raise RuntimeError(
+                "发网检测器未初始化。请检查：\n" "1. 检测服务是否正确启动\n" "2. 发网检测模型文件是否存在\n" "3. 系统依赖是否完整"
+            )
 
         hairnet_results = []
 

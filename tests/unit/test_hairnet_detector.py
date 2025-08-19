@@ -142,16 +142,22 @@ class TestHairnetDetector(unittest.TestCase):
             self.assertIsInstance(result["confidence"], float)
 
     def test_detect_hairnet_fallback(self):
-        """测试模型不可用时的回退机制"""
+        """测试模型不可用时返回错误结果"""
         detector_no_model = HairnetDetector()
         detector_no_model.model = None
 
-        head_region = self.test_image[20:80, 30:90]
-        result = detector_no_model.detect_hairnet(head_region)
+        # 提供一个有效的人体边界框，确保能够提取头部ROI
+        human_bbox = [50, 20, 150, 200]  # x1, y1, x2, y2
 
+        # 测试应该返回错误结果
+        result = detector_no_model.detect_hairnet(
+            self.test_image, human_bbox=human_bbox
+        )
+
+        # 检查返回的错误结果
         self.assertIsInstance(result, dict)
-        self.assertIn("wearing_hairnet", result)
-        self.assertIn("confidence", result)
+        self.assertIn("error", result)
+        self.assertIn("CNN 发网检测模型未加载", result["error"])
 
     def test_preprocess_image(self):
         """测试图像预处理"""

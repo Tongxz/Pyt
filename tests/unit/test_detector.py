@@ -148,13 +148,16 @@ class TestHumanDetector(unittest.TestCase):
         self.assertGreater(high_confidence, self.detector.confidence_threshold)
 
     def test_model_fallback(self):
-        """测试模型加载失败时的回退机制"""
+        """测试模型加载失败时抛出异常"""
         # 创建一个模型为None的检测器
         detector_with_no_model = HumanDetector()
         detector_with_no_model.model = None
 
-        detections = detector_with_no_model.detect(self.test_image)
-        self.assertIsInstance(detections, list)
+        # 测试应该抛出RuntimeError
+        with self.assertRaises(RuntimeError) as context:
+            detector_with_no_model.detect(self.test_image)
+
+        self.assertIn("YOLO模型未加载", str(context.exception))
 
     def tearDown(self):
         """测试后清理"""

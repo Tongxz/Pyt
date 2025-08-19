@@ -25,6 +25,7 @@ try:
 except ImportError as e:
     print(f"导入YOLOHairnetDetector失败: {e}")
     YOLO_DETECTOR_AVAILABLE = False
+    YOLOHairnetDetector = None
 
 logger = logging.getLogger(__name__)
 
@@ -62,28 +63,35 @@ class HairnetDetectionFactory:
 
         # 检查YOLOv8是否可用
         if not YOLO_DETECTOR_AVAILABLE:
-            logger.warning("YOLOv8 发网检测器不可用，使用备用检测器")
-            from api.app import FallbackHairnetDetectionPipeline
-
-            return FallbackHairnetDetectionPipeline()
+            raise RuntimeError(
+                "YOLOv8 发网检测器不可用。请检查：\n"
+                "1. ultralytics 是否正确安装\n"
+                "2. PyTorch 是否正确安装\n"
+                "3. 相关依赖是否完整"
+            )
 
         # 确保 model_path 不为 None
         if model_path is None:
-            model_path = (
-                "models/hairnet_detection/models/hairnet_detection/hairnet_detection.pt"
-            )
+            model_path = "models/hairnet_detection/hairnet_detection.pt"
             logger.warning(f"未指定模型路径，使用默认路径: {model_path}")
 
         # 检查模型文件是否存在
         if not os.path.exists(model_path):
-            logger.warning(f"模型文件不存在: {model_path}")
-            raise FileNotFoundError(f"模型文件不存在: {model_path}")
+            raise FileNotFoundError(
+                f"模型文件不存在: {model_path}。请检查：\n"
+                "1. 模型文件路径是否正确\n"
+                "2. 模型文件是否已下载\n"
+                "3. 文件权限是否正确"
+            )
 
         logger.info(f"创建 YOLOv8 发网检测器，模型: {model_path}, 设备: {device}")
         try:
-            # 使用全局导入的 YOLOHairnetDetector
-            from src.core.yolo_hairnet_detector import YOLOHairnetDetector
-
+            # 再次检查YOLOHairnetDetector是否可用
+            if YOLOHairnetDetector is None:
+                raise ImportError(
+                    "YOLOHairnetDetector不可用。请确保已安装ultralytics库: pip install ultralytics"
+                )
+            # 使用已导入的 YOLOHairnetDetector
             return YOLOHairnetDetector(
                 model_path=model_path,
                 device=device,
@@ -91,8 +99,7 @@ class HairnetDetectionFactory:
                 iou_thres=iou_thres,
             )
         except Exception as e:
-            logger.error(f"创建 YOLOv8 发网检测器失败: {e}")
-            raise
+            raise RuntimeError(f"创建 YOLOv8 发网检测器失败: {e}")
 
     @staticmethod
     def is_yolo_available() -> bool:

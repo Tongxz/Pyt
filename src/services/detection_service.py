@@ -113,115 +113,67 @@ def comprehensive_detection_logic(
     if image is None:
         raise ValueError("无法获取有效的图像数据")
 
-    if optimized_pipeline:
-        logger.info("使用优化检测管道进行综合检测")
-        result = optimized_pipeline.detect_comprehensive(image)
-
-        # 转换为前端期望的格式
-        total_persons = len(result.person_detections)
-        persons_with_hairnet = len(
-            [h for h in result.hairnet_results if h.get("has_hairnet", False)]
-        )
-        persons_handwashing = len(
-            [h for h in result.handwash_results if h.get("is_handwashing", False)]
-        )
-        persons_sanitizing = len(
-            [s for s in result.sanitize_results if s.get("is_sanitizing", False)]
+    if optimized_pipeline is None:
+        raise RuntimeError(
+            "优化检测管道未初始化。请检查：\n" "1. 检测服务是否正确启动\n" "2. 模型文件是否存在\n" "3. 系统依赖是否完整"
         )
 
-        # 构建统计信息
-        statistics = {
-            "persons_with_hairnet": persons_with_hairnet,
-            "persons_handwashing": persons_handwashing,
-            "persons_sanitizing": persons_sanitizing,
-        }
+    logger.info("使用优化检测管道进行综合检测")
+    result = optimized_pipeline.detect_comprehensive(image)
 
-        # 构建检测详情
-        detections = []
-        for detection in result.person_detections:
+    # 转换为前端期望的格式
+    total_persons = len(result.person_detections)
+    persons_with_hairnet = len(
+        [h for h in result.hairnet_results if h.get("has_hairnet", False)]
+    )
+    persons_handwashing = len(
+        [h for h in result.handwash_results if h.get("is_handwashing", False)]
+    )
+    persons_sanitizing = len(
+        [s for s in result.sanitize_results if s.get("is_sanitizing", False)]
+    )
+
+    # 构建统计信息
+    statistics = {
+        "persons_with_hairnet": persons_with_hairnet,
+        "persons_handwashing": persons_handwashing,
+        "persons_sanitizing": persons_sanitizing,
+    }
+
+    # 构建检测详情
+    detections = []
+    for detection in result.person_detections:
+        detections.append(
+            {
+                "class": "person",
+                "confidence": detection.get("confidence", 0.0),
+                "bbox": detection.get("bbox", [0, 0, 0, 0]),
+            }
+        )
+
+    for detection in result.hairnet_results:
+        if detection.get("has_hairnet", False):
             detections.append(
                 {
-                    "class": "person",
-                    "confidence": detection.get("confidence", 0.0),
-                    "bbox": detection.get("bbox", [0, 0, 0, 0]),
+                    "class": "hairnet",
+                    "confidence": detection.get("hairnet_confidence", 0.0),
+                    "bbox": detection.get("hairnet_bbox", [0, 0, 0, 0]),
                 }
             )
 
-        for detection in result.hairnet_results:
-            if detection.get("has_hairnet", False):
-                detections.append(
-                    {
-                        "class": "hairnet",
-                        "confidence": detection.get("hairnet_confidence", 0.0),
-                        "bbox": detection.get("hairnet_bbox", [0, 0, 0, 0]),
-                    }
-                )
+    # 处理标注图像
+    annotated_image_b64 = None
+    if result.annotated_image is not None:
+        _, buffer = cv2.imencode(".jpg", result.annotated_image)
+        annotated_image_b64 = base64.b64encode(buffer.tobytes()).decode("utf-8")
 
-        # 处理标注图像
-        annotated_image_b64 = None
-        if result.annotated_image is not None:
-            _, buffer = cv2.imencode(".jpg", result.annotated_image)
-            annotated_image_b64 = base64.b64encode(buffer.tobytes()).decode("utf-8")
-
-        return {
-            "total_persons": total_persons,
-            "statistics": statistics,
-            "detections": detections,
-            "annotated_image": annotated_image_b64,
-            "processing_times": result.processing_times,
-        }
-
-    elif hairnet_pipeline:
-        logger.warning("优化检测管道不可用，回退到原有发网检测逻辑")
-        result = hairnet_pipeline.detect_hairnet_compliance(image)
-
-        # 转换为前端期望的格式
-        total_persons = result.get("total_persons", 0)
-        persons_with_hairnet = result.get("persons_with_hairnet", 0)
-
-        # 构建统计信息（回退模式只有发网检测）
-        statistics = {
-            "persons_with_hairnet": persons_with_hairnet,
-            "persons_handwashing": 0,  # 回退模式不支持
-            "persons_sanitizing": 0,  # 回退模式不支持
-        }
-
-        # 构建检测详情
-        detections = []
-        for detection in result.get("detections", []):
-            detections.append(
-                {
-                    "class": "hairnet"
-                    if detection.get("has_hairnet", False)
-                    else "person",
-                    "confidence": detection.get("confidence", 0.0),
-                    "bbox": detection.get("bbox", [0, 0, 0, 0]),
-                }
-            )
-
-        # 处理可视化图像
-        annotated_image_b64 = None
-        if "visualization" in result and isinstance(
-            result.get("visualization"), np.ndarray
-        ):
-            img = result["visualization"]
-            _, buffer = cv2.imencode(".jpg", img)
-            annotated_image_b64 = base64.b64encode(buffer.tobytes()).decode("utf-8")
-        elif "visualization" in result and isinstance(result.get("visualization"), str):
-            # 如果已经是base64字符串
-            annotated_image_b64 = result["visualization"]
-
-        return {
-            "total_persons": total_persons,
-            "statistics": statistics,
-            "detections": detections,
-            "annotated_image": annotated_image_b64,
-            "compliance_rate": result.get("compliance_rate", 0.0),
-            "average_confidence": result.get("average_confidence", 0.0),
-        }
-    else:
-        logger.error("所有检测管道都不可用")
-        raise RuntimeError("检测服务未初始化")
+    return {
+        "total_persons": total_persons,
+        "statistics": statistics,
+        "detections": detections,
+        "annotated_image": annotated_image_b64,
+        "processing_times": result.processing_times,
+    }
 
 
 def initialize_detection_services():

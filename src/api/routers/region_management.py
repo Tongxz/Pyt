@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException
 
 # This would be in a service file
-from services.region_service import RegionService, get_region_service
+from src.services.region_service import RegionService, get_region_service
 
 router = APIRouter()
 

@@ -540,15 +540,20 @@ class HairnetDetector:
 
         Returns:
             发网检测结果
+
+        Raises:
+            RuntimeError: 当 CNN 模型不可用时
         """
-        # 优先使用CNN模型进行检测，如果失败则回退到传统方法
+        if self.model is None:
+            raise RuntimeError(
+                "CNN 发网检测模型未加载。请检查：\n" "1. 模型文件是否存在\n" "2. 模型路径是否正确\n" "3. 模型是否正确初始化"
+            )
+
         try:
-            # 尝试使用CNN模型进行检测
+            # 只使用CNN模型进行检测
             return self._detect_hairnet_with_cnn(head_region)
         except Exception as e:
-            self.logger.warning(f"CNN模型检测失败，回退到传统方法: {e}")
-            # 回退到传统方法
-            return self._detect_hairnet_with_pytorch(head_region)
+            raise RuntimeError(f"CNN发网检测失败: {e}")
 
     def _detect_hairnet_with_cnn(self, head_region: np.ndarray) -> Dict[str, Any]:
         """

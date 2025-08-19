@@ -35,35 +35,65 @@
       "color": "#28a745"
     },
     {
+      "id": "region_handwash_001",
       "name": "洗手区域",
       "type": "handwash",
-      "polygon": [[300, 150], [450, 150], [450, 300], [300, 300]],
+      "description": "主要洗手区域",
+      "points": [
+        { "x": 300, "y": 150 },
+        { "x": 450, "y": 150 },
+        { "x": 450, "y": 300 },
+        { "x": 300, "y": 300 }
+      ],
       "rules": {
         "require_handwashing": true,
         "min_duration": 20,
         "detection_sensitivity": 0.6
-      }
+      },
+      "isActive": true,
+      "createdAt": "2025-08-06T08:43:25.725Z",
+      "color": "#007bff"
     },
     {
+      "id": "region_sanitize_001",
       "name": "消毒区域",
       "type": "sanitize",
-      "polygon": [[500, 100], [650, 100], [650, 250], [500, 250]],
+      "description": "手部消毒区域",
+      "points": [
+        { "x": 500, "y": 100 },
+        { "x": 650, "y": 100 },
+        { "x": 650, "y": 250 },
+        { "x": 500, "y": 250 }
+      ],
       "rules": {
         "require_sanitizing": true,
         "min_duration": 10,
         "detection_sensitivity": 0.5
-      }
+      },
+      "isActive": true,
+      "createdAt": "2025-08-06T08:43:25.725Z",
+      "color": "#ffc107"
     },
     {
+      "id": "region_entrance_handwash_001",
       "name": "入口洗手区",
       "type": "handwash",
-      "polygon": [[50, 400], [200, 400], [200, 550], [50, 550]],
+      "description": "入口处洗手区域",
+      "points": [
+        { "x": 50, "y": 400 },
+        { "x": 200, "y": 400 },
+        { "x": 200, "y": 550 },
+        { "x": 50, "y": 550 }
+      ],
       "rules": {
         "require_handwashing": true,
         "require_hairnet": true,
         "min_duration": 25,
         "detection_sensitivity": 0.7
-      }
+      },
+      "isActive": true,
+      "createdAt": "2025-08-06T08:43:25.725Z",
+      "color": "#dc3545"
     }
   ],
   "canvas_size": {
