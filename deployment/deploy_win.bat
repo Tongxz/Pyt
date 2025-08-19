@@ -1,6 +1,8 @@
 @echo off
 REM 一键部署脚本，自动适配 conda 或 venv 环境，适用于 Windows 11 + 4090 GPU
 REM 请以管理员身份运行（右键以管理员身份运行命令提示符）
+REM 更新日期: 2024-01-20
+REM 更新内容: 修复脚本路径、更新模型配置、添加MediaPipe环境变量设置
 
 REM 设置控制台编码为UTF-8以正确显示中文
 chcp 65001 >nul
@@ -125,7 +127,7 @@ if exist requirements.dev.txt (
     !PIP_CMD! install -r requirements.txt
 ) else (
     echo [WARNING] 未找到依赖文件，手动安装核心包...
-    !PIP_CMD! install ultralytics fastapi uvicorn opencv-python numpy pillow
+    !PIP_CMD! install ultralytics fastapi uvicorn opencv-python numpy pillow mediapipe
 )
 
 if !errorlevel! neq 0 (
@@ -136,18 +138,25 @@ if !errorlevel! neq 0 (
 
 REM 验证ultralytics安装
 echo [INFO] 验证 ultralytics 安装...
-!PYTHON_CMD! check_ultralytics.py
+!PYTHON_CMD! scripts\check_ultralytics.py
 if !errorlevel! neq 0 (
     echo [ERROR] ultralytics 验证失败！
     pause
     exit /b 1
 )
 
-REM 检查 models/yolo/yolov8m.pt 是否存在
+REM 创建models目录结构
+echo [INFO] 创建模型目录结构...
+if not exist models\yolo (
+    mkdir models\yolo
+    echo [INFO] 已创建 models\yolo 目录
+)
+
+REM 检查 models/yolo/yolov8s.pt 是否存在
 echo [INFO] 检查 YOLO 模型文件...
-if not exist models/yolo/yolov8m.pt (
-    echo [INFO] 正在下载 models/yolo/yolov8m.pt 权重文件...
-    !PYTHON_CMD! -c "from ultralytics import YOLO; YOLO('models/yolo/yolov8m.pt')"
+if not exist models\yolo\yolov8s.pt (
+    echo [INFO] 正在下载 yolov8s.pt 权重文件...
+    !PYTHON_CMD! -c "from ultralytics import YOLO; model = YOLO('yolov8s.pt'); import shutil; shutil.move('yolov8s.pt', 'models/yolo/yolov8s.pt')"
     if !errorlevel! neq 0 (
         echo [WARNING] YOLO模型下载失败，服务启动时会自动下载
     )
@@ -167,6 +176,12 @@ if not exist src\api\app.py (
     pause
     exit /b 1
 )
+
+REM 设置MediaPipe环境变量（解决GPU上下文问题）
+echo [INFO] 设置MediaPipe环境变量...
+set MEDIAPIPE_DISABLE_GPU=1
+set GLOG_logtostderr=1
+set GLOG_v=1
 
 REM 启动服务
 echo [INFO] 正在启动服务，请稍候...
