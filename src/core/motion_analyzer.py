@@ -5,6 +5,8 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
+from src.config.unified_params import get_unified_params
+
 logger = logging.getLogger(__name__)
 
 
@@ -59,18 +61,22 @@ class MotionTracker:
             运动统计字典
         """
         if len(self.position_history) < 2:
+            # 当数据不足时返回默认统计（新增字段保持为0）
             return {
                 "avg_speed": 0.0,
                 "horizontal_movement": 0.0,
                 "vertical_movement": 0.0,
                 "movement_ratio": 0.0,
                 "position_variance": 0.0,
+                "horizontal_move_std": 0.0,
+                "vertical_move_std": 0.0,
+                "move_frequency_hz": 0.0,
             }
 
         # 计算平均速度
-        speeds = []
-        horizontal_movements = []
-        vertical_movements = []
+        speeds: List[float] = []
+        horizontal_movements: List[float] = []
+        vertical_movements: List[float] = []
 
         for velocity, _ in self.velocity_history:
             speed = np.sqrt(velocity[0] ** 2 + velocity[1] ** 2)
@@ -94,12 +100,23 @@ class MotionTracker:
         else:
             position_variance = 0.0
 
+        # 计算运动标准差
+        horizontal_move_std = np.std(horizontal_movements) if horizontal_movements else 0.0
+        vertical_move_std = np.std(vertical_movements) if vertical_movements else 0.0
+
+        # 计算运动采样频率（Hz）
+        total_time = self.position_history[-1][1] - self.position_history[0][1]
+        move_frequency_hz = (len(self.position_history) - 1) / total_time if total_time > 0 else 0.0
+
         return {
             "avg_speed": avg_speed,
             "horizontal_movement": avg_horizontal,
             "vertical_movement": avg_vertical,
             "movement_ratio": movement_ratio,
             "position_variance": position_variance,
+            "horizontal_move_std": horizontal_move_std,
+            "vertical_move_std": vertical_move_std,
+            "move_frequency_hz": move_frequency_hz,
         }
 
     def clear(self):
@@ -123,6 +140,10 @@ class MotionAnalyzer:
             {}
         )  # track_id -> {'left': MotionTracker, 'right': MotionTracker}
 
+        # 从统一配置中加载阈值
+        params = get_unified_params()
+        self.detection_rules = params.detection_rules
+
         # 洗手行为特征阈值（调整为更宽松的阈值）
         self.handwash_thresholds = {
             "min_movement_ratio": 0.8,  # 水平运动/垂直运动比例（降低要求）
@@ -130,6 +151,8 @@ class MotionAnalyzer:
             "max_avg_speed": 0.8,  # 最大平均速度（提高上限）
             "min_position_variance": 0.0005,  # 最小位置方差（降低要求）
             "min_duration": 2.0,  # 最小持续时间（降低到2秒）
+            "horizontal_move_std": self.detection_rules.horizontal_move_std,
+            "min_move_frequency_hz": self.detection_rules.min_move_frequency_hz,
         }
 
         # 消毒行为特征阈值
@@ -365,6 +388,13 @@ class MotionAnalyzer:
         if motion_stats["horizontal_movement"] > motion_stats["vertical_movement"]:
             confidence += 0.2
 
+        # 检查运动频率
+        if (
+            motion_stats["move_frequency_hz"]
+            >= self.handwash_thresholds["min_move_frequency_hz"]
+        ):
+            confidence += 0.2
+
         return min(1.0, confidence)
 
     def _evaluate_sanitize_motion(self, motion_stats: Dict) -> float:
@@ -440,6 +470,25 @@ class MotionAnalyzer:
                 }
 
         return summary
+
+    def analyze_motion(self, track_id: int, motion_type: str = "handwashing") -> float:
+        """
+        分析运动模式（统一接口）
+        
+        Args:
+            track_id: 追踪目标ID
+            motion_type: 运动类型 ('handwashing' 或 'sanitizing')
+            
+        Returns:
+            运动模式置信度 (0.0-1.0)
+        """
+        if motion_type.lower() == "handwashing":
+            return self.analyze_handwashing(track_id)
+        elif motion_type.lower() == "sanitizing":
+            return self.analyze_sanitizing(track_id)
+        else:
+            logger.warning(f"Unknown motion type: {motion_type}, defaulting to handwashing")
+            return self.analyze_handwashing(track_id)
 
     def cleanup(self):
         """清理资源"""

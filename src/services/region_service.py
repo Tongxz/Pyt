@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import Depends
 
-from core.region import Region, RegionManager, RegionType
+from src.core.region import Region, RegionManager, RegionType
 
 logger = logging.getLogger(__name__)
 

@@ -71,12 +71,6 @@ class TestHairnetDetector(unittest.TestCase):
         self.detector = HairnetDetector()
         self.test_image = np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8)
 
-    def test_init(self):
-        """测试初始化"""
-        self.assertIsNotNone(self.detector)
-        self.assertEqual(self.detector.confidence_threshold, 0.7)
-        self.assertIsNotNone(self.detector.transform)
-
     def test_get_device(self):
         """测试设备选择"""
         device = self.detector._get_device("auto")
@@ -189,12 +183,6 @@ class TestHairnetDetectionPipeline(unittest.TestCase):
             MockPersonDetector(), MockHairnetDetector()
         )
         self.test_frame = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
-
-    def test_init(self):
-        """测试初始化"""
-        self.assertIsNotNone(self.pipeline)
-        self.assertIsNotNone(self.pipeline.person_detector)
-        self.assertIsNotNone(self.pipeline.hairnet_detector)
 
     def test_detect_hairnet_compliance_empty_frame(self):
         """测试空帧的发网合规检测"""

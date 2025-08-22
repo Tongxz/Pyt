@@ -1,0 +1,20 @@
+{
+  "user_id": "demo_user",
+  "created_at": 1755746957.7439485,
+  "last_updated": 1755747038.873453,
+  "behavior_counts": {
+    "handwash": 4
+  },
+  "session_count": 0,
+  "total_detection_time": 0.0,
+  "avg_handwash_duration": 15.0,
+  "avg_sanitize_duration": 0.0,
+  "preferred_hand": "unknown",
+  "motion_intensity": "medium",
+  "sensitivity_preference": 0.5,
+  "false_positive_tolerance": 0.3,
+  "common_environments": [],
+  "lighting_conditions": [],
+  "feedback_history": [],
+  "behavior_patterns": {}
+}

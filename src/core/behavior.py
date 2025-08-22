@@ -6,16 +6,18 @@ from typing import Any, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
-try:
-    import mediapipe as mp
-
-    MEDIAPIPE_AVAILABLE = True
-except ImportError:
-    MEDIAPIPE_AVAILABLE = False
-    mp = None
-
+# 导入pose_detector模块以使用统一的GPU配置策略
+from .pose_detector import PoseDetectorFactory, MEDIAPIPE_AVAILABLE, _gpu_enabled
 from .motion_analyzer import MotionAnalyzer
-from .pose_detector import PoseDetector
+
+# 使用pose_detector中配置好的MediaPipe
+if MEDIAPIPE_AVAILABLE:
+    try:
+        import mediapipe as mp
+    except ImportError:
+        mp = None
+else:
+    mp = None
 
 # 导入统一参数配置
 try:
@@ -29,6 +31,9 @@ except ImportError:
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     )
     from src.config.unified_params import get_unified_params
+
+from src.core.deep_behavior_recognizer import DeepBehaviorRecognizer
+from src.utils.logger import get_logger
 
 logger = logging.getLogger(__name__)
 
@@ -113,8 +118,9 @@ class BehaviorRecognizer:
                     min_detection_confidence=self.params.min_detection_confidence,
                     min_tracking_confidence=self.params.min_tracking_confidence,
                 )
+                device_mode = "GPU模式" if _gpu_enabled else "CPU模式"
                 logger.info(
-                    "MediaPipe hands detector initialized successfully with unified params"
+                    f"MediaPipe hands detector initialized successfully with unified params ({device_mode})"
                 )
             except Exception as e:
                 logger.warning(f"Failed to initialize MediaPipe hands detector: {e}")
@@ -123,9 +129,17 @@ class BehaviorRecognizer:
         # 初始化高级检测模块
         if self.use_advanced_detection:
             try:
-                self.pose_detector = PoseDetector()
+                params = get_unified_params()
+                pose_backend = params.pose_detection.backend
+                pose_params = params.pose_detection
+                
+                self.pose_detector = PoseDetectorFactory.create(
+                    backend=pose_backend,
+                    model_path=pose_params.model_path,
+                    device=pose_params.device
+                )
                 self.motion_analyzer = MotionAnalyzer()
-                logger.info("Advanced detection modules initialized")
+                logger.info(f"Advanced detection modules initialized (Pose Backend: {pose_backend})")
             except Exception as e:
                 logger.warning(f"Failed to initialize advanced detection: {e}")
                 self.use_advanced_detection = False

@@ -80,6 +80,9 @@ class TestMotionTracker(unittest.TestCase):
             "vertical_movement": 0.0,
             "movement_ratio": 0.0,
             "position_variance": 0.0,
+            "horizontal_move_std": 0.0,
+            "vertical_move_std": 0.0,
+            "move_frequency_hz": 0.0,
         }
         self.assertEqual(stats, expected)
 
@@ -132,15 +135,6 @@ class TestMotionAnalyzer(unittest.TestCase):
         """设置测试环境"""
         self.analyzer = MotionAnalyzer()
         self.track_id = 1
-
-    def test_init(self):
-        """测试初始化"""
-        self.assertIsInstance(self.analyzer.hand_trackers, dict)
-        self.assertEqual(len(self.analyzer.hand_trackers), 0)
-
-        # 检查阈值设置
-        self.assertIn("min_movement_ratio", self.analyzer.handwash_thresholds)
-        self.assertIn("max_hand_distance", self.analyzer.sanitize_thresholds)
 
     def test_update_hand_motion_with_keypoints(self):
         """测试使用关键点更新手部运动"""

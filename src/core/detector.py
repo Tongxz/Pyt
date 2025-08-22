@@ -1,4 +1,5 @@
 import logging
+from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Tuple
 
 import cv2
@@ -13,7 +14,69 @@ from src.config.unified_params import get_unified_params
 logger = logging.getLogger(__name__)
 
 
-class HumanDetector:
+class BaseDetector(ABC):
+    """检测器抽象基类"""
+
+    def __init__(self, model_path: str, device: str = "auto"):
+        """
+        初始化检测器
+
+        Args:
+            model_path: 模型路径
+            device: 计算设备
+        """
+        self.model_path = model_path
+        self.device = self._get_device(device)
+        self.model = self._load_model(model_path)
+
+    def _get_device(self, device: str) -> str:
+        """获取计算设备"""
+        if device == "auto":
+            return "cuda" if torch.cuda.is_available() else "cpu"
+        return device
+
+    @abstractmethod
+    def _load_model(self, model_path: str):
+        """加载模型"""
+        pass
+
+    @abstractmethod
+    def detect(self, image: np.ndarray) -> List[Dict]:
+        """执行检测"""
+        pass
+
+    def visualize(self, image: np.ndarray, detections: List[Dict]) -> np.ndarray:
+        """可视化检测结果"""
+        result_image = image.copy()
+        for detection in detections:
+            bbox = detection.get("bbox")
+            if bbox:
+                x1, y1, x2, y2 = [int(coord) for coord in bbox]
+                cv2.rectangle(result_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+            label = self._get_label(detection)
+            if label:
+                cv2.putText(
+                    result_image,
+                    label,
+                    (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.9,
+                    (0, 255, 0),
+                    2,
+                )
+        return result_image
+
+    def _get_label(self, detection: Dict) -> str:
+        """获取用于可视化的标签"""
+        label = detection.get("class_name", "")
+        confidence = detection.get("confidence")
+        if confidence:
+            label += f" {confidence:.2f}"
+        return label.strip()
+
+
+class HumanDetector(BaseDetector):
     """人体检测器
 
     基于YOLOv8的人体检测模块，支持实时检测和批量处理
@@ -31,13 +94,10 @@ class HumanDetector:
         self.params = get_unified_params().human_detection
 
         # 使用统一配置或传入参数
-        if model_path is None:
-            model_path = self.params.model_path
-        if device == "auto":
-            device = self.params.device
+        model_path = model_path if model_path is not None else self.params.model_path
+        device = device if device != "auto" else self.params.device
 
-        self.device = self._get_device(device)
-        self.model = self._load_model(model_path)
+        super().__init__(model_path, device)
 
         # 使用统一参数配置
         self.confidence_threshold = self.params.confidence_threshold
@@ -54,12 +114,6 @@ class HumanDetector:
             f"conf={self.confidence_threshold}, iou={self.iou_threshold}, "
             f"min_area={self.min_box_area}"
         )
-
-    def _get_device(self, device: str) -> str:
-        """获取计算设备"""
-        if device == "auto":
-            return "cuda" if torch.cuda.is_available() else "cpu"
-        return device
 
     def _load_model(self, model_path: str):
         """加载YOLO模型"""
@@ -194,38 +248,4 @@ class HumanDetector:
         Returns:
             带有检测框的图像
         """
-        result_image = image.copy()
-
-        for detection in detections:
-            bbox = detection["bbox"]
-            confidence = detection["confidence"]
-            class_name = detection["class_name"]
-
-            x1, y1, x2, y2 = bbox
-
-            # 绘制边界框
-            cv2.rectangle(
-                result_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2
-            )
-
-            # 绘制标签
-            label = f"{class_name}: {confidence:.2f}"
-            label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
-            cv2.rectangle(
-                result_image,
-                (int(x1), int(y1) - label_size[1] - 10),
-                (int(x1) + label_size[0], int(y1)),
-                (0, 255, 0),
-                -1,
-            )
-            cv2.putText(
-                result_image,
-                label,
-                (int(x1), int(y1) - 5),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 0, 0),
-                2,
-            )
-
-        return result_image
+        return self.visualize(image, detections)

@@ -43,6 +43,12 @@ human_detection:
   min_width: 25
   model_path: models/yolo/yolov8s.pt
   nms_threshold: 0.4
+detection_rules:
+  consecutive_frames: 30            # 连续满足条件帧数阈值
+  horizontal_move_std: 8.0          # 手腕水平坐标标准差阈值 (像素)
+  min_move_frequency_hz: 2.0        # 水平移动最小频率 (Hz)
+  iou_threshold: 0.5                # ROI IoU 阈值
+  ioua_threshold: 0.5               # ROI IOUA 阈值
 system:
   api_timeout: 30.0
   batch_size: 1

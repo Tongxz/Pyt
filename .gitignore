@@ -198,16 +198,19 @@ results/
 .DS_Store
 Thumbs.db
 
-# 视频和图像文件（大文件）
+# 视频文件（大文件）
 *.mp4
 *.avi
 *.mov
 *.mkv
-*.jpg
-*.jpeg
-*.png
-*.bmp
-*.tiff
+
+# 图像文件忽略规则已移除，允许测试图片被版本控制跟踪
+# 注意：禁止创建人工测试图片，必须使用真实的测试数据
+# *.jpg
+# *.jpeg
+# *.png
+# *.bmp
+# *.tiff
 !docs/images/
 !assets/images/
 !tests/fixtures/images/

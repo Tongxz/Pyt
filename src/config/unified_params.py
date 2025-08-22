@@ -26,14 +26,14 @@ class HumanDetectionParams:
     device: str = "auto"
 
     # 检测阈值
-    confidence_threshold: float = 0.3  # 统一置信度阈值
+    confidence_threshold: float = 0.1  # 降低置信度阈值以提高检测敏感度
     iou_threshold: float = 0.5  # IoU阈值
 
     # 过滤参数
-    min_box_area: int = 800  # 最小检测框面积
-    max_box_ratio: float = 6.0  # 最大宽高比
-    min_width: int = 25  # 最小宽度
-    min_height: int = 50  # 最小高度
+    min_box_area: int = 500  # 降低最小检测框面积
+    max_box_ratio: float = 5.0  # 增加最大宽高比
+    min_width: int = 20  # 降低最小宽度
+    min_height: int = 30  # 降低最小高度
 
     # NMS参数
     nms_threshold: float = 0.4  # 非极大值抑制阈值
@@ -97,11 +97,33 @@ class BehaviorRecognitionParams:
 
     # 稳定性检查帧数
     hairnet_stability_frames: int = 5
-    handwashing_stability_frames: int = 8  # 提高洗手稳定性要求
+    handwashing_stability_frames: int = 8  # 提高握手稳定性要求
     sanitizing_stability_frames: int = 5
 
     # 历史记录配置
     history_maxlen: int = 30  # 行为历史最大长度
+
+
+@dataclass
+class PoseDetectionParams:
+    """姿态检测参数配置"""
+
+    backend: str = "yolov8"  # 'yolov8' or 'mediapipe'
+    model_path: str = "models/yolo/yolov8n-pose.pt"
+    device: str = "auto"
+    confidence_threshold: float = 0.5
+    iou_threshold: float = 0.7
+
+
+@dataclass
+class DetectionRulesParams:
+    """规则阈值参数配置"""
+
+    consecutive_frames: int = 5
+    horizontal_move_std: float = 0.01
+    min_move_frequency_hz: float = 1.0
+    iou_threshold: float = 0.5
+    ioua_threshold: float = 0.6
 
 
 @dataclass
@@ -133,12 +155,16 @@ class UnifiedParams:
     human_detection: HumanDetectionParams
     hairnet_detection: HairnetDetectionParams
     behavior_recognition: BehaviorRecognitionParams
+    pose_detection: PoseDetectionParams
+    detection_rules: DetectionRulesParams
     system: SystemParams
 
     def __init__(self):
         self.human_detection = HumanDetectionParams()
         self.hairnet_detection = HairnetDetectionParams()
         self.behavior_recognition = BehaviorRecognitionParams()
+        self.pose_detection = PoseDetectionParams()
+        self.detection_rules = DetectionRulesParams()
         self.system = SystemParams()
 
     def to_dict(self) -> Dict[str, Any]:
@@ -147,6 +173,8 @@ class UnifiedParams:
             "human_detection": asdict(self.human_detection),
             "hairnet_detection": asdict(self.hairnet_detection),
             "behavior_recognition": asdict(self.behavior_recognition),
+            "pose_detection": asdict(self.pose_detection),
+            "detection_rules": asdict(self.detection_rules),
             "system": asdict(self.system),
         }
 
@@ -201,6 +229,16 @@ class UnifiedParams:
                     if hasattr(instance.behavior_recognition, key):
                         setattr(instance.behavior_recognition, key, value)
 
+            if "pose_detection" in config_data:
+                for key, value in config_data["pose_detection"].items():
+                    if hasattr(instance.pose_detection, key):
+                        setattr(instance.pose_detection, key, value)
+
+            if "detection_rules" in config_data:
+                for key, value in config_data["detection_rules"].items():
+                    if hasattr(instance.detection_rules, key):
+                        setattr(instance.detection_rules, key, value)
+
             if "system" in config_data:
                 for key, value in config_data["system"].items():
                     if hasattr(instance.system, key):
@@ -226,6 +264,10 @@ class UnifiedParams:
                 self.behavior_recognition, param
             ):
                 setattr(self.behavior_recognition, param, value)
+            elif module == "pose_detection" and hasattr(self.pose_detection, param):
+                setattr(self.pose_detection, param, value)
+            elif module == "detection_rules" and hasattr(self.detection_rules, param):
+                setattr(self.detection_rules, param, value)
             elif module == "system" and hasattr(self.system, param):
                 setattr(self.system, param, value)
             else:
@@ -245,6 +287,10 @@ class UnifiedParams:
                 return getattr(self.hairnet_detection, param)
             elif module == "behavior_recognition":
                 return getattr(self.behavior_recognition, param)
+            elif module == "pose_detection":
+                return getattr(self.pose_detection, param)
+            elif module == "detection_rules":
+                return getattr(self.detection_rules, param)
             elif module == "system":
                 return getattr(self.system, param)
             else:
@@ -345,4 +391,6 @@ if __name__ == "__main__":
     print(f"  人体检测置信度: {params.human_detection.confidence_threshold}")
     print(f"  发网检测置信度: {params.hairnet_detection.confidence_threshold}")
     print(f"  行为识别置信度: {params.behavior_recognition.confidence_threshold}")
+    print(f"  姿态检测后端: {params.pose_detection.backend}")
     print(f"  洗手最小时间: {params.behavior_recognition.handwashing_min_duration}秒")
+    print(f"  规则检测水平移动标准差阈值: {params.detection_rules.horizontal_move_std}")

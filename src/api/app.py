@@ -5,6 +5,7 @@
 import logging
 import os
 import sys
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,10 +29,29 @@ from src.services import detection_service, region_service, websocket_service
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用程序生命周期管理."""
+    # Startup
+    logger.info("Starting up the application...")
+    # Initialize services
+    detection_service.initialize_detection_services()
+    app.state.optimized_pipeline = detection_service.optimized_pipeline
+    app.state.hairnet_pipeline = detection_service.hairnet_pipeline
+    region_service.initialize_region_service(
+        os.path.join(project_root, "config", "regions.json")
+    )
+    yield
+    # Shutdown
+    logger.info("Shutting down the application...")
+
+
 app = FastAPI(
     title="人体行为检测系统 API",
     description="基于深度学习的实时人体行为检测与分析系统",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Enable CORS
@@ -49,18 +69,6 @@ async def health_check():
     """健康检查端点."""
     return {"status": "healthy"}
 
-
-@app.on_event("startup")
-async def startup_event():
-    """应用程序启动事件."""
-    logger.info("Starting up the application...")
-    # Initialize services
-    detection_service.initialize_detection_services()
-    app.state.optimized_pipeline = detection_service.optimized_pipeline
-    app.state.hairnet_pipeline = detection_service.hairnet_pipeline
-    region_service.initialize_region_service(
-        os.path.join(project_root, "config", "regions.json")
-    )
 
 
 # Include routers

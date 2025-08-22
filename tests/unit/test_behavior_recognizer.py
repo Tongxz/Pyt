@@ -31,12 +31,25 @@ class TestBehaviorRecognizer(unittest.TestCase):
         self.assertIsNone(recognizer.pose_detector)
         self.assertIsNone(recognizer.motion_analyzer)
 
-    def test_init_advanced_mode(self):
+    @patch("src.core.behavior.MotionAnalyzer")
+    @patch("src.core.behavior.PoseDetectorFactory")
+    def test_init_advanced_mode(self, mock_pose_factory, mock_motion_analyzer):
         """测试高级模式初始化"""
+        # 模拟依赖项的成功创建
+        mock_pose_factory.create.return_value = Mock()
+        mock_motion_analyzer.return_value = Mock()
+
         recognizer = BehaviorRecognizer(use_advanced_detection=True)
-        self.assertTrue(recognizer.use_advanced_detection)
-        self.assertIsNotNone(recognizer.pose_detector)
-        self.assertIsNotNone(recognizer.motion_analyzer)
+        self.assertTrue(
+            recognizer.use_advanced_detection,
+            "高级模式应该被启用，但初始化失败并被禁用",
+        )
+        self.assertIsNotNone(
+            recognizer.pose_detector, "高级模式下姿态检测器应被初始化"
+        )
+        self.assertIsNotNone(
+            recognizer.motion_analyzer, "高级模式下运动分析器应被初始化"
+        )
 
     def test_detect_handwashing_no_hands(self):
         """测试无手部输入的洗手检测"""

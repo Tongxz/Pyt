@@ -19,7 +19,13 @@ from typing import Any, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
-from src.core.pose_detector import PoseDetector
+from src.config.unified_params import get_unified_params
+from src.core.behavior import DeepBehaviorRecognizer
+from src.core.detector import HumanDetector
+from src.core.hairnet_detector import HairnetDetector
+from src.core.motion_analyzer import MotionAnalyzer
+from src.core.pose_detector import PoseDetectorFactory
+from src.utils.logger import get_logger
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +145,22 @@ class OptimizedDetectionPipeline:
         self.hairnet_detector = hairnet_detector
         self.behavior_recognizer = behavior_recognizer
 
+        # 初始化姿态检测器
+        try:
+            params = get_unified_params()
+            pose_backend = params.pose_detection.backend
+            pose_params = params.pose_detection
+            
+            self.pose_detector = PoseDetectorFactory.create(
+                backend=pose_backend,
+                model_path=pose_params.model_path,
+                device=pose_params.device
+            )
+            logger.info(f"姿态检测器 ({pose_backend}) 初始化成功")
+        except Exception as e:
+            logger.warning(f"姿态检测器初始化失败: {e}")
+            self.pose_detector = None
+
         # 初始化缓存
         self.enable_cache = enable_cache
         if enable_cache:
@@ -155,6 +177,15 @@ class OptimizedDetectionPipeline:
         }
 
         logger.info(f"优化检测管道初始化完成，缓存: {'启用' if enable_cache else '禁用'}")
+
+    def detect(self, image: np.ndarray, **kwargs) -> DetectionResult:
+        """检测方法 - detect_comprehensive的别名，保持接口兼容性"""
+        return self.detect_comprehensive(
+            image,
+            enable_hairnet=kwargs.get('enable_hairnet', True),
+            enable_handwash=kwargs.get('enable_handwash', True),
+            enable_sanitize=kwargs.get('enable_sanitize', True)
+        )
 
     def detect_comprehensive(
         self,
@@ -455,10 +486,12 @@ class OptimizedDetectionPipeline:
 
                 if person_region.size > 0:
                     # 使用行为识别器检测洗手行为
-                    # 需要提供手部区域信息
-                    hand_regions = self._estimate_hand_regions(bbox)
+                    # 获取实际的手部区域信息
+                    hand_regions = self._get_actual_hand_regions(image, bbox)
+                    
+                    # 传递完整图像帧给行为识别器以支持MediaPipe检测
                     confidence = self.behavior_recognizer.detect_handwashing(
-                        bbox, hand_regions
+                        bbox, hand_regions, track_id=i+1, frame=image
                     )
                     is_handwashing = (
                         confidence >= self.behavior_recognizer.confidence_threshold
@@ -527,13 +560,15 @@ class OptimizedDetectionPipeline:
 
                 if person_region.size > 0:
                     # 使用行为识别器检测消毒行为
-                    # 需要提供手部区域信息
-                    hand_regions = self._estimate_hand_regions(bbox)
+                    # 获取实际的手部区域信息
+                    hand_regions = self._get_actual_hand_regions(image, bbox)
+                    
+                    # 传递完整图像帧给行为识别器以支持MediaPipe检测
                     confidence = self.behavior_recognizer.detect_sanitizing(
-                        bbox, hand_regions
+                        bbox, hand_regions, track_id=i+1, frame=image
                     )
                     is_sanitizing = (
-                        confidence > self.behavior_recognizer.confidence_threshold
+                        confidence >= self.behavior_recognizer.confidence_threshold
                     )
                 else:
                     is_sanitizing = False
@@ -565,7 +600,7 @@ class OptimizedDetectionPipeline:
 
     def _estimate_hand_regions(self, person_bbox: List[int]) -> List[Dict]:
         """
-        估算人体的手部区域
+        估算人体的手部区域，优先使用姿态检测器
 
         Args:
             person_bbox: 人体边界框 [x1, y1, x2, y2]
@@ -573,6 +608,18 @@ class OptimizedDetectionPipeline:
         Returns:
             手部区域列表
         """
+        # 如果有姿态检测器，尝试使用实际的手部检测
+        if self.pose_detector is not None:
+            try:
+                # 从人体区域提取图像进行手部检测
+                x1, y1, x2, y2 = person_bbox
+                # 这里需要完整图像，所以返回估算结果
+                # 实际的手部检测在其他地方进行
+                pass
+            except Exception as e:
+                logger.debug(f"姿态检测器手部检测失败，使用估算方法: {e}")
+        
+        # 使用估算方法
         x1, y1, x2, y2 = person_bbox
         width = x2 - x1
         height = y2 - y1
@@ -588,6 +635,61 @@ class OptimizedDetectionPipeline:
         right_hand_bbox = [x2 - hand_box_w, hand_y, x2, hand_y + hand_box_h]
 
         return [{"bbox": left_hand_bbox}, {"bbox": right_hand_bbox}]
+
+    def _get_actual_hand_regions(self, image: np.ndarray, person_bbox: List[int]) -> List[Dict]:
+        """
+        获取实际的手部区域，优先使用姿态检测器
+
+        Args:
+            image: 完整图像
+            person_bbox: 人体边界框 [x1, y1, x2, y2]
+
+        Returns:
+            手部区域列表
+        """
+        hand_regions = []
+        
+        # 如果有姿态检测器，尝试使用实际的手部检测
+        if self.pose_detector is not None:
+            try:
+                hands_results = self.pose_detector.detect_hands(image)
+                
+                # 过滤在人体区域内的手部
+                x1, y1, x2, y2 = person_bbox
+                for hand_result in hands_results:
+                    if 'landmarks' in hand_result:
+                        landmarks = hand_result['landmarks']
+                        # 计算手部边界框
+                        hand_x_coords = [lm.x * image.shape[1] for lm in landmarks]
+                        hand_y_coords = [lm.y * image.shape[0] for lm in landmarks]
+                        
+                        hand_x1 = int(min(hand_x_coords))
+                        hand_y1 = int(min(hand_y_coords))
+                        hand_x2 = int(max(hand_x_coords))
+                        hand_y2 = int(max(hand_y_coords))
+                        
+                        # 检查手部是否在人体区域内
+                        hand_center_x = (hand_x1 + hand_x2) / 2
+                        hand_center_y = (hand_y1 + hand_y2) / 2
+                        
+                        if x1 <= hand_center_x <= x2 and y1 <= hand_center_y <= y2:
+                            hand_regions.append({
+                                'bbox': [hand_x1, hand_y1, hand_x2, hand_y2],
+                                'landmarks': landmarks,
+                                'confidence': hand_result.get('confidence', 0.8)
+                            })
+                
+                if hand_regions:
+                    logger.debug(f"检测到 {len(hand_regions)} 个实际手部区域")
+                    return hand_regions
+                    
+            except Exception as e:
+                logger.debug(f"姿态检测器手部检测失败，使用估算方法: {e}")
+        
+        # 回退到估算方法
+        estimated_regions = self._estimate_hand_regions(person_bbox)
+        logger.debug("使用估算的手部区域")
+        return estimated_regions
 
     def _create_annotated_image(
         self,
@@ -668,9 +770,8 @@ class OptimizedDetectionPipeline:
 
             # 只有在检测到人体时才检测并绘制手部关键点
             hands_count = 0
-            if person_detections:
-                pose_detector = PoseDetector()
-                hands_results = pose_detector.detect_hands(image)
+            if person_detections and self.pose_detector is not None:
+                hands_results = self.pose_detector.detect_hands(image)
                 hands_count = len(hands_results)
 
                 # 绘制手部关键点

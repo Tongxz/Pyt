@@ -177,9 +177,9 @@ if not exist src\api\app.py (
     exit /b 1
 )
 
-REM 设置MediaPipe环境变量（解决GPU上下文问题）
+REM 设置MediaPipe环境变量（系统将自动检测GPU可用性）
 echo [INFO] 设置MediaPipe环境变量...
-set MEDIAPIPE_DISABLE_GPU=1
+REM MEDIAPIPE_DISABLE_GPU 已移除，系统将自动检测GPU并选择最佳设备
 set GLOG_logtostderr=1
 set GLOG_v=1
 

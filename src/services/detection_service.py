@@ -5,12 +5,10 @@ from typing import Any, Dict, Optional
 
 from fastapi import Depends, Request
 
-from core.optimized_detection_pipeline import (
-    DetectionResult,
+from src.core.optimized_detection_pipeline import (
     OptimizedDetectionPipeline,
 )
-from core.pose_detector import PoseDetector
-from core.yolo_hairnet_detector import YOLOHairnetDetector
+from src.core.yolo_hairnet_detector import YOLOHairnetDetector
 
 logger = logging.getLogger(__name__)
 
@@ -181,29 +179,41 @@ def initialize_detection_services():
     global optimized_pipeline, hairnet_pipeline
     logger.info("正在初始化检测服务...")
     try:
-        # 这里的初始化逻辑需要从 app.py 的 startup 事件中迁移过来
-        # 为了演示，我们先使用None
+        # 导入必要的模块
         from src.core.behavior import BehaviorRecognizer
         from src.core.data_manager import DetectionDataManager
         from src.core.detector import HumanDetector
         from src.core.region import RegionManager
         from src.core.rule_engine import RuleEngine
 
+        logger.info("正在创建检测器实例...")
         detector = HumanDetector()
         behavior_recognizer = BehaviorRecognizer()
         data_manager = DetectionDataManager()
         region_manager = RegionManager()
         rule_engine = RuleEngine()
 
+        logger.info("正在初始化优化检测管道...")
+        # 正确赋值给全局变量
         optimized_pipeline = OptimizedDetectionPipeline(
             human_detector=detector,
             hairnet_detector=YOLOHairnetDetector(),
             behavior_recognizer=behavior_recognizer,
         )
+        
+        logger.info("正在初始化发网检测管道...")
         hairnet_pipeline = YOLOHairnetDetector()
+        
         logger.info("检测服务初始化完成。")
+        logger.info(f"优化管道状态: {optimized_pipeline is not None}")
+        logger.info(f"发网管道状态: {hairnet_pipeline is not None}")
+        
     except Exception as e:
         logger.exception(f"初始化检测服务失败: {e}")
+        # 确保在失败时全局变量保持为None
+        optimized_pipeline = None
+        hairnet_pipeline = None
+        raise  # 重新抛出异常以便上层处理
 
 
 def _process_video_with_recording(
@@ -228,7 +238,7 @@ def _process_video_with_recording(
     import cv2
     import numpy as np
 
-    from core.tracker import MultiObjectTracker
+    from src.core.tracker import MultiObjectTracker
 
     logger.info(f"开始处理视频: {filename}")
 
@@ -756,6 +766,206 @@ def _draw_detections_on_frame_with_tracking(frame, result, tracked_objects):
                                 cv2.line(annotated_frame, pt1, pt2, (0, 255, 255), 1)
 
     return annotated_frame
+
+
+def _draw_detections_on_frame(frame, result):
+    """
+    在帧上绘制检测结果
+
+    Args:
+        frame: 输入帧
+        result: 检测结果
+
+    Returns:
+        带标注的帧
+    """
+    import cv2
+
+    # 绘制人体检测框
+    for person in result.person_detections:
+        bbox = person.get("bbox", [])
+        if len(bbox) >= 4:
+            x1, y1, x2, y2 = map(int, bbox[:4])
+            confidence = person.get("confidence", 0)
+
+            # 绘制边界框
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+            # 绘制标签
+            label = f"Person {confidence:.2f}"
+            cv2.putText(
+                frame,
+                label,
+                (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 255, 0),
+                2,
+            )
+
+    # 绘制发网检测结果
+    for i, hairnet in enumerate(result.hairnet_results):
+        if hairnet.get("has_hairnet", False):
+            # 获取对应的人体检测框
+            if i < len(result.person_detections):
+                bbox = result.person_detections[i].get("bbox", [])
+                if len(bbox) >= 4:
+                    x1, y1, x2, y2 = map(int, bbox[:4])
+                    # 在人体框上方绘制发网标签
+                    cv2.putText(
+                        frame,
+                        "Hairnet ✓",
+                        (x1, y1 - 30),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        (0, 255, 255),
+                        2,
+                    )
+
+    # 绘制洗手检测结果
+    for i, handwash in enumerate(result.handwash_results):
+        if handwash.get("is_handwashing", False):
+            if i < len(result.person_detections):
+                bbox = result.person_detections[i].get("bbox", [])
+                if len(bbox) >= 4:
+                    x1, y1, x2, y2 = map(int, bbox[:4])
+                    cv2.putText(
+                        frame,
+                        "Handwashing ✓",
+                        (x1, y1 - 50),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        (255, 0, 255),
+                        2,
+                    )
+
+    # 绘制消毒检测结果
+    for i, sanitize in enumerate(result.sanitize_results):
+        if sanitize.get("is_sanitizing", False):
+            if i < len(result.person_detections):
+                bbox = result.person_detections[i].get("bbox", [])
+                if len(bbox) >= 4:
+                    x1, y1, x2, y2 = map(int, bbox[:4])
+                    cv2.putText(
+                        frame,
+                        "Sanitizing ✓",
+                        (x1, y1 - 70),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        (255, 255, 0),
+                        2,
+                    )
+
+    # 只有在检测到人体时才检测并绘制手部关键点
+    hands_count = 0
+    if result.person_detections:
+        pose_detector = PoseDetector()
+        hands_results = pose_detector.detect_hands(frame)
+        hands_count = len(hands_results)
+
+        # 绘制手部关键点
+        for hand_result in hands_results:
+            landmarks = hand_result["landmarks"]
+            hand_label = hand_result["label"]
+            bbox = hand_result["bbox"]
+
+            # 检查手部是否在任何人体检测框内
+            hand_in_person = False
+            for person in result.person_detections:
+                person_bbox = person.get("bbox", [])
+                if len(person_bbox) >= 4:
+                    if _bbox_overlap(
+                        [bbox[0], bbox[1], bbox[2], bbox[3]], person_bbox, 0.1
+                    ):
+                        hand_in_person = True
+                        break
+
+            # 只绘制在人体区域内的手部
+            if hand_in_person:
+                # 绘制手部边界框
+                cv2.rectangle(
+                    frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 255, 0), 2
+                )  # 黄色边界框
+
+                # 绘制手部标签
+                cv2.putText(
+                    frame,
+                    f"Hand: {hand_label}",
+                    (bbox[0], bbox[1] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (255, 255, 0),
+                    2,
+                )
+
+                # 绘制手部关键点
+                h, w = frame.shape[:2]
+                for i, landmark in enumerate(landmarks):
+                    x = int(landmark["x"] * w)
+                    y = int(landmark["y"] * h)
+
+                    # 绘制关键点
+                    cv2.circle(frame, (x, y), 3, (0, 255, 255), -1)  # 青色圆点
+
+                    # 为重要关键点添加标签
+                    if i in [4, 8, 12, 16, 20, 0]:  # MediaPipe手部关键点索引
+                        point_names = {
+                            0: "腕",
+                            4: "拇指",
+                            8: "食指",
+                            12: "中指",
+                            16: "无名指",
+                            20: "小指",
+                        }
+                        if i in point_names:
+                            cv2.putText(
+                                frame,
+                                point_names[i],
+                                (x + 5, y - 5),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.3,
+                                (0, 255, 255),
+                                1,
+                            )
+
+                # 绘制手部连接线
+                if len(landmarks) >= 21:
+                    # 连接手腕到各指根部
+                    wrist = (int(landmarks[0]["x"] * w), int(landmarks[0]["y"] * h))
+                    finger_bases = [5, 9, 13, 17]
+                    for base_idx in finger_bases:
+                        if base_idx < len(landmarks):
+                            base = (
+                                int(landmarks[base_idx]["x"] * w),
+                                int(landmarks[base_idx]["y"] * h),
+                            )
+                            cv2.line(frame, wrist, base, (0, 255, 255), 1)
+
+                    # 连接各指关节
+                    finger_connections = [
+                        [1, 2, 3, 4],  # 拇指
+                        [5, 6, 7, 8],  # 食指
+                        [9, 10, 11, 12],  # 中指
+                        [13, 14, 15, 16],  # 无名指
+                        [17, 18, 19, 20],  # 小指
+                    ]
+
+                    for finger in finger_connections:
+                        for j in range(len(finger) - 1):
+                            if finger[j] < len(landmarks) and finger[j + 1] < len(
+                                landmarks
+                            ):
+                                pt1 = (
+                                    int(landmarks[finger[j]]["x"] * w),
+                                    int(landmarks[finger[j]]["y"] * h),
+                                )
+                                pt2 = (
+                                    int(landmarks[finger[j + 1]]["x"] * w),
+                                    int(landmarks[finger[j + 1]]["y"] * h),
+                                )
+                                cv2.line(frame, pt1, pt2, (0, 255, 255), 1)
+
+    return frame
 
 
 def _draw_detections_on_frame(frame, result):

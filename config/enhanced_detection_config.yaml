@@ -1,0 +1,380 @@
+# 增强手部行为检测系统配置文件
+# Enhanced Hand Behavior Detection System Configuration
+
+# 系统基础配置
+system:
+  version: "2.0.0"
+  debug_mode: false
+  log_level: "INFO"
+  log_file: "logs/enhanced_detection.log"
+  max_log_size: "10MB"
+  log_backup_count: 5
+
+# 增强手部检测配置
+enhanced_hand_detection:
+  # MediaPipe 配置
+  mediapipe:
+    static_image_mode: false
+    max_num_hands: 2
+    min_detection_confidence: 0.5
+    min_tracking_confidence: 0.5
+    model_complexity: 1
+  
+  # 质量评估配置
+  quality_assessment:
+    enabled: true
+    overall_threshold: 0.3
+    completeness_weight: 0.3
+    stability_weight: 0.25
+    shape_weight: 0.25
+    continuity_weight: 0.2
+    
+    # 关键点完整性阈值
+    completeness_threshold: 0.8
+    
+    # 稳定性参数
+    stability_window_size: 5
+    stability_threshold: 0.02
+    
+    # 形状合理性参数
+    finger_length_ratio_min: 0.1
+    finger_length_ratio_max: 0.4
+    palm_area_ratio_min: 0.2
+    palm_area_ratio_max: 0.6
+    
+    # 运动连续性参数
+    continuity_window_size: 3
+    max_position_jump: 0.1
+  
+  # 备用检测配置
+  backup_detection:
+    enabled: true
+    skin_detection:
+      # HSV 肤色范围
+      hsv_lower: [0, 20, 70]
+      hsv_upper: [20, 255, 255]
+      # 形态学操作
+      morphology_kernel_size: 5
+      morphology_iterations: 2
+      # 轮廓过滤
+      min_contour_area: 1000
+      max_contour_area: 50000
+  
+  # 多模型融合配置
+  model_fusion:
+    enabled: true
+    confidence_threshold: 0.6
+    fusion_strategy: "weighted_average"  # weighted_average, max_confidence, voting
+    weights:
+      mediapipe: 0.7
+      backup: 0.3
+
+# 增强运动分析配置
+enhanced_motion_analysis:
+  # 高级运动跟踪配置
+  advanced_tracking:
+    enabled: true
+    max_history_length: 100
+    position_smoothing_factor: 0.3
+    velocity_smoothing_factor: 0.5
+    
+    # 高级特征提取
+    feature_extraction:
+      # 基础统计特征
+      basic_stats: true
+      # 轨迹形状特征
+      trajectory_shape: true
+      # 频域特征
+      frequency_domain: true
+      # 运动模式特征
+      motion_patterns: true
+      
+      # FFT 参数
+      fft_window_size: 32
+      dominant_frequency_count: 3
+      
+      # 轨迹分析参数
+      curvature_window_size: 5
+      direction_change_threshold: 0.5
+  
+  # 自适应阈值管理
+  adaptive_thresholds:
+    enabled: true
+    adaptation_rate: 0.1
+    min_samples_for_adaptation: 10
+    confidence_weight: 0.3
+    
+    # 基础阈值
+    base_thresholds:
+      handwash:
+        motion_intensity: 0.3
+        duration_min: 10.0
+        duration_max: 60.0
+        hand_proximity: 0.2
+        circular_motion: 0.4
+      sanitize:
+        motion_intensity: 0.2
+        duration_min: 3.0
+        duration_max: 15.0
+        hand_proximity: 0.15
+        rubbing_motion: 0.3
+    
+    # 自适应范围
+    adaptation_ranges:
+      motion_intensity: [0.1, 0.8]
+      duration_min: [5.0, 20.0]
+      duration_max: [30.0, 120.0]
+      hand_proximity: [0.1, 0.4]
+      circular_motion: [0.2, 0.7]
+      rubbing_motion: [0.1, 0.6]
+
+# 深度学习行为识别配置
+deep_behavior_recognition:
+  enabled: true
+  
+  # 模型配置
+  model:
+    device: "auto"  # auto, cpu, cuda
+    sequence_length: 30
+    feature_dim: 50
+    hidden_dim: 128
+    num_layers: 4
+    num_heads: 8
+    dropout: 0.1
+    
+    # 位置编码
+    max_position_encoding: 1000
+  
+  # 训练配置
+  training:
+    batch_size: 32
+    learning_rate: 0.001
+    num_epochs: 100
+    early_stopping_patience: 10
+    validation_split: 0.2
+    
+    # 优化器
+    optimizer: "adam"
+    weight_decay: 0.0001
+    
+    # 学习率调度
+    lr_scheduler: "cosine"
+    lr_warmup_epochs: 5
+  
+  # 预测配置
+  prediction:
+    confidence_threshold: 0.5
+    smoothing_window: 5
+    min_sequence_length: 10
+    
+    # 行为类别
+    behavior_classes:
+      - "handwash"
+      - "sanitize"
+      - "none"
+  
+  # 模型路径
+  model_paths:
+    pretrained: "models/pretrained_behavior_model.pth"
+    checkpoint: "models/behavior_model_checkpoint.pth"
+    best_model: "models/best_behavior_model.pth"
+
+# 个性化引擎配置
+personalization:
+  enabled: true
+  
+  # 用户画像配置
+  user_profile:
+    storage_path: "user_profiles"
+    auto_save_interval: 300  # 秒
+    max_history_days: 90
+    
+    # 行为统计
+    behavior_tracking:
+      track_duration: true
+      track_frequency: true
+      track_time_patterns: true
+      track_environment: true
+  
+  # 自适应优化配置
+  adaptive_optimization:
+    enabled: true
+    learning_rate: 0.05
+    min_feedback_count: 5
+    confidence_weight: 0.4
+    recency_weight: 0.3
+    frequency_weight: 0.3
+    
+    # 阈值调整范围
+    threshold_adjustment_range: 0.2
+    max_threshold_change: 0.1
+  
+  # 行为模式分析
+  pattern_analysis:
+    enabled: true
+    min_pattern_length: 5
+    pattern_similarity_threshold: 0.8
+    time_window_hours: 24
+    
+    # 异常检测
+    anomaly_detection:
+      enabled: true
+      z_score_threshold: 2.0
+      min_samples: 10
+  
+  # 推荐系统
+  recommendation_system:
+    enabled: true
+    max_recommendations: 5
+    recommendation_types:
+      - "duration_improvement"
+      - "frequency_reminder"
+      - "technique_suggestion"
+      - "hygiene_tips"
+    
+    # 推荐触发条件
+    triggers:
+      low_duration_threshold: 15.0  # 秒
+      high_frequency_threshold: 20  # 次/天
+      low_frequency_threshold: 3   # 次/天
+
+# 性能优化配置
+performance_optimization:
+  enabled: true
+  
+  # 多线程配置
+  multithreading:
+    enabled: true
+    max_workers: 4
+    thread_pool_type: "ThreadPoolExecutor"  # ThreadPoolExecutor, ProcessPoolExecutor
+    task_timeout: 5.0  # 秒
+  
+  # 帧缓冲配置
+  frame_buffering:
+    enabled: true
+    max_buffer_size: 30
+    buffer_strategy: "fifo"  # fifo, priority
+    frame_skip_threshold: 0.9  # 缓冲区使用率阈值
+  
+  # 模型量化配置
+  model_quantization:
+    enabled: false  # 默认禁用，需要时启用
+    quantization_type: "dynamic"  # dynamic, static
+    backend: "fbgemm"  # fbgemm, qnnpack
+    
+    # 静态量化配置
+    static_quantization:
+      calibration_dataset_size: 100
+      calibration_batch_size: 10
+  
+  # 性能监控
+  performance_monitoring:
+    enabled: true
+    metrics_collection_interval: 10  # 秒
+    memory_threshold_mb: 1000
+    cpu_threshold_percent: 80
+    
+    # 自动调优
+    auto_tuning:
+      enabled: true
+      tuning_interval: 300  # 秒
+      performance_target_fps: 30
+      quality_vs_speed_balance: 0.7  # 0=速度优先, 1=质量优先
+
+# 数据管理配置
+data_management:
+  # 输入数据配置
+  input:
+    supported_formats: ["mp4", "avi", "mov", "mkv", "jpg", "png", "jpeg"]
+    max_image_size: [1920, 1080]
+    auto_resize: true
+    resize_method: "bilinear"
+  
+  # 输出数据配置
+  output:
+    save_results: true
+    results_format: "json"  # json, csv, xml
+    save_annotated_frames: false
+    output_directory: "output"
+    
+    # 视频输出
+    video_output:
+      codec: "mp4v"
+      quality: 0.8
+      fps: 30
+  
+  # 缓存配置
+  caching:
+    enabled: true
+    cache_directory: "cache"
+    max_cache_size_mb: 500
+    cache_expiry_hours: 24
+
+# 实验和调试配置
+experimental:
+  # 实验性功能
+  features:
+    gesture_recognition: false
+    emotion_detection: false
+    multi_person_tracking: false
+    3d_hand_pose: false
+  
+  # 调试配置
+  debug:
+    save_intermediate_results: false
+    visualize_features: false
+    profile_performance: false
+    verbose_logging: false
+    
+    # 可视化配置
+    visualization:
+      show_landmarks: true
+      show_bounding_boxes: true
+      show_motion_trails: false
+      show_quality_scores: true
+      annotation_color: [0, 255, 0]
+      annotation_thickness: 2
+
+# 安全和隐私配置
+security:
+  # 数据隐私
+  privacy:
+    anonymize_data: true
+    data_retention_days: 30
+    encrypt_user_profiles: false
+    
+  # 访问控制
+  access_control:
+    require_authentication: false
+    session_timeout_minutes: 60
+    max_concurrent_users: 10
+  
+  # 数据验证
+  validation:
+    validate_input_data: true
+    sanitize_file_paths: true
+    check_file_permissions: true
+
+# 集成配置
+integration:
+  # API 配置
+  api:
+    enabled: false
+    host: "localhost"
+    port: 8000
+    cors_enabled: true
+    rate_limiting: true
+    max_requests_per_minute: 100
+  
+  # 数据库配置
+  database:
+    enabled: false
+    type: "sqlite"  # sqlite, postgresql, mysql
+    connection_string: "sqlite:///behavior_detection.db"
+    pool_size: 5
+    
+  # 外部服务
+  external_services:
+    cloud_storage: false
+    analytics_service: false
+    notification_service: false
